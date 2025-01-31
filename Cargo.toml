@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "crates/mcp-types"
+]
+default-members = [
+    "crates/mcp-types"
+]
+
+resolver = "2"
