@@ -1,0 +1,17 @@
+[package]
+name = "mcp-core"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+uuid = ["dep:uuid"]
+
+[dependencies]
+async-trait = { workspace = true }
+mcp-types = { path = "../mcp-types" }
+serde = { workspace = true }
+uuid = { version = "1.12.1", features = ["v4", "fast-rng"], optional = true }
+
+[dev-dependencies]
+mcp-types = { path = "../mcp-types" }
