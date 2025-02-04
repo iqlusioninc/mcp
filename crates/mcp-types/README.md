@@ -40,5 +40,5 @@ cargo add mcp-types
 
 Contributions are welcome! Please note that this crate's types are automatically generated from the MCP schema, so most changes will have to do with how the bindings are generated, how types are re-exported, documentation, and other things of that nature. Please do not manually edit generated code.
 
-To contribute, please fork this repo, make a new branch off of `main`, and PR back to the `main` branch of this repo.
+To contribute, please fork the `mcp` repo, make a new branch off of `main`, and make a PR from your fork to `main` again.
 

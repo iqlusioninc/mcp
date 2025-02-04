@@ -1,8 +1,9 @@
 [package]
 name = "mcp-types"
 version = "0.1.0"
-edition = "2021"
+description = "Generated bindings from the Model Context Protocol (MCP) JSON Schema(s)"
 authors = ["Collin Brittain <collin@iqlusion.io>"]
+edition = "2021"
 
 [features]
 default = ["2024_11_05"]
@@ -11,10 +12,10 @@ default = ["2024_11_05"]
 [dependencies]
 jsonschema = "0.28.3"
 serde = { workspace = true }
-serde_json = "1.0.138"
+serde_json = { workspace = true }
 
 [dev-dependencies]
-serde_json = "1.0.138"
+serde_json = { workspace = true }
 
 [build-dependencies]
 prettyplease = "0.2.29"
