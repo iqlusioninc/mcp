@@ -1,23 +1,50 @@
+use std::collections::HashMap;
+
 use mcp_types::{
-    JSONRPCNotification, JSONRPCNotificationParams, JSONRPCRequest, JSONRPCRequestParams,
-    JSONRPCRequestParamsMeta, Notification, Request, RequestId,
+    JSONRPCError, JSONRPCNotification, JSONRPCNotificationParams, JSONRPCRequest,
+    JSONRPCRequestParams, JSONRPCRequestParamsMeta, JSONRPCResponse, Notification, Request,
+    RequestId,
 };
 
 use crate::transport::Transport;
 
 pub struct Protocol<E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static> {
+    notification_handlers: HashMap<String, Box<dyn Fn(JSONRPCNotification)>>,
+    request_handlers:
+        HashMap<String, Box<dyn Fn(JSONRPCRequest) -> Result<JSONRPCResponse, JSONRPCError>>>,
     #[cfg(not(feature = "uuid"))]
     request_id: i64,
     transport: Box<dyn Transport<Error = E>>,
 }
 
-impl<E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static> Protocol<E> {
+impl<E> Protocol<E>
+where
+    E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
+{
     pub fn new(transport: Box<dyn Transport<Error = E>>) -> Self {
         Self {
+            notification_handlers: HashMap::new(),
+            request_handlers: HashMap::new(),
             #[cfg(not(feature = "uuid"))]
             request_id: 0,
             transport,
         }
+    }
+
+    pub fn register_notification_handler(
+        &mut self,
+        method: String,
+        handler: Box<dyn Fn(JSONRPCNotification)>,
+    ) {
+        self.notification_handlers.insert(method, handler);
+    }
+
+    pub fn register_request_handler(
+        &mut self,
+        method: String,
+        handler: Box<dyn Fn(JSONRPCRequest) -> Result<JSONRPCResponse, JSONRPCError>>,
+    ) {
+        self.request_handlers.insert(method, handler);
     }
 
     pub async fn send_request(&mut self, request: Request) -> Result<(), E> {
