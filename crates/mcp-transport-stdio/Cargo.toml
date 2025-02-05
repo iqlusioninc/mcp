@@ -1,0 +1,27 @@
+[package]
+name = "mcp-transport-stdio"
+version = "0.1.0"
+description = "An MCP transport implementation that enables a client/server communication using stdio"
+authors = ["Collin Brittain <collin@iqlusion.io>"]
+edition = "2021"
+
+[features]
+default = ["client", "server"]
+client = []
+server = []
+
+[platform]
+nix = { version = "0.29.0" }
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3.9" }
+
+[dependencies]
+async-trait = { workspace = true }
+mcp-core = { path = "../mcp-core" }
+mcp-types = { path = "../mcp-types" }
+nix = { version = "0.29.0", features = ["signal"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

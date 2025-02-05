@@ -4,19 +4,25 @@
 
 use mcp_types::JSONRPCMessage;
 
+/// Represents the Transport layer which handles communication
 #[async_trait::async_trait]
-/// Layer which handles encoding, transmitting, and receiving messages
 pub trait Transport: Send + Sync {
     type Error: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static;
 
     /// Starts the transport, including any connection steps that might need to be taken.
-    async fn start(&self) -> Result<(), Self::Error>;
+    async fn start(&mut self) -> Result<(), Self::Error>;
 
     /// Closes the connection
-    async fn close(&self) -> Result<(), Self::Error>;
+    async fn close(&mut self) -> Result<(), Self::Error>;
 
     /// Sends a message
-    async fn send(&self, message: JSONRPCMessage) -> Result<(), Self::Error>;
+    async fn send(&mut self, message: JSONRPCMessage) -> Result<(), Self::Error>;
+}
+
+/// Represents a transport that can receive messages
+#[async_trait::async_trait]
+pub trait ReceiveTransport: Transport {
+    async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error>;
 }
 
 #[cfg(test)]
@@ -51,21 +57,21 @@ pub mod test_utils {
     impl Transport for MockTransport {
         type Error = std::io::Error;
 
-        async fn start(&self) -> Result<(), Self::Error> {
+        async fn start(&mut self) -> Result<(), Self::Error> {
             if *self.should_fail.lock().unwrap() {
                 return Err(std::io::Error::new(std::io::ErrorKind::Other, "Mock error"));
             }
             Ok(())
         }
 
-        async fn close(&self) -> Result<(), Self::Error> {
+        async fn close(&mut self) -> Result<(), Self::Error> {
             if *self.should_fail.lock().unwrap() {
                 return Err(std::io::Error::new(std::io::ErrorKind::Other, "Mock error"));
             }
             Ok(())
         }
 
-        async fn send(&self, message: JSONRPCMessage) -> Result<(), Self::Error> {
+        async fn send(&mut self, message: JSONRPCMessage) -> Result<(), Self::Error> {
             if *self.should_fail.lock().unwrap() {
                 return Err(std::io::Error::new(std::io::ErrorKind::Other, "Mock error"));
             }
