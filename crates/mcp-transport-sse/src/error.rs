@@ -2,6 +2,9 @@ use mcp_types::JSONRPCMessage;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SSEClientTransportError {
+    #[error("invalid parameters")]
+    InvalidParams(String),
+
     #[error("transport already started")]
     AlreadyStarted,
 

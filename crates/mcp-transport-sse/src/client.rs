@@ -25,8 +25,12 @@ pub struct SSEClientTransport {
 }
 
 impl SSEClientTransport {
-    pub fn new(params: SSEClientParams) -> Self {
-        Self {
+    pub fn new(params: SSEClientParams) -> Result<Self, SSEClientTransportError> {
+        if let Err(err) = params.validate() {
+            return Err(SSEClientTransportError::InvalidParams(err));
+        }
+
+        Ok(Self {
             params,
             started: false,
             send_handle: None,
@@ -34,7 +38,7 @@ impl SSEClientTransport {
             in_rx: None,
             out_tx: None,
             cancel: None,
-        }
+        })
     }
 }
 
