@@ -63,7 +63,7 @@ where
         self.transport.send(request.into()).await
     }
 
-    pub async fn send_notification(&self, notification: Notification) -> Result<(), E> {
+    pub async fn send_notification(&mut self, notification: Notification) -> Result<(), E> {
         let notification = JSONRPCNotification {
             jsonrpc: "2.0".to_string(),
             method: notification.method,
@@ -75,7 +75,7 @@ where
         self.transport.send(notification.into()).await
     }
 
-    pub async fn connect(&self) -> Result<(), E> {
+    pub async fn connect(&mut self) -> Result<(), E> {
         self.transport.start().await
     }
 
@@ -108,7 +108,7 @@ mod tests {
     async fn test_connect() {
         let sent_messages = Arc::new(Mutex::new(Vec::new()));
         let transport = MockTransport::new(sent_messages.clone());
-        let protocol = Protocol::new(Box::new(transport));
+        let mut protocol = Protocol::new(Box::new(transport));
 
         assert!(protocol.connect().await.is_ok());
     }
@@ -118,7 +118,7 @@ mod tests {
         let sent_messages = Arc::new(Mutex::new(Vec::new()));
         let transport = MockTransport::new(sent_messages.clone());
         transport.set_should_fail(true);
-        let protocol = Protocol::new(Box::new(transport));
+        let mut protocol = Protocol::new(Box::new(transport));
 
         assert!(protocol.connect().await.is_err());
     }
@@ -127,7 +127,7 @@ mod tests {
     async fn test_send_notification() {
         let sent_messages = Arc::new(Mutex::new(Vec::new()));
         let transport = MockTransport::new(sent_messages.clone());
-        let protocol = Protocol::new(Box::new(transport));
+        let mut protocol = Protocol::new(Box::new(transport));
 
         let notification = Notification {
             method: "test_method".to_string(),
