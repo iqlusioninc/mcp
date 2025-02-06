@@ -4,7 +4,7 @@ use std::{
     process::Child,
 };
 
-use mcp_core::transport::{ReceiveTransport, Transport};
+use mcp_core::transport::Transport;
 use mcp_types::JSONRPCMessage;
 use tracing::info;
 
@@ -232,10 +232,7 @@ impl Transport for StdioClientTransport {
 
         Ok(())
     }
-}
 
-#[async_trait::async_trait]
-impl ReceiveTransport for StdioClientTransport {
     async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error> {
         if !self.started {
             return Err(std::io::Error::new(

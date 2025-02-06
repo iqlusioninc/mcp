@@ -17,16 +17,15 @@ pub trait Transport: Send + Sync {
 
     /// Sends a message
     async fn send(&mut self, message: JSONRPCMessage) -> Result<(), Self::Error>;
-}
 
-/// Represents a transport that can receive messages
-#[async_trait::async_trait]
-pub trait ReceiveTransport: Transport {
+    /// Receives a message
     async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error>;
 }
 
 #[cfg(test)]
 pub mod test_utils {
+    use mcp_types::JSONRPCNotification;
+
     use super::*;
     use std::sync::{Arc, Mutex};
 
@@ -77,6 +76,18 @@ pub mod test_utils {
             }
             self.sent_messages.lock().unwrap().push(message);
             Ok(())
+        }
+
+        async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error> {
+            if *self.should_fail.lock().unwrap() {
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Mock error"));
+            }
+
+            Ok(JSONRPCMessage::Notification(JSONRPCNotification {
+                jsonrpc: "2.0".to_string(),
+                method: "test".to_string(),
+                params: None,
+            }))
         }
     }
 }

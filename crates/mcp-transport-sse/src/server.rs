@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse, routing::post, Json, Router};
 use futures::SinkExt;
-use mcp_core::transport::{ReceiveTransport, Transport};
+use mcp_core::transport::Transport;
 use mcp_types::JSONRPCMessage;
 use reqwest::Client;
 use reqwest_websocket::{Message, RequestBuilderExt};
@@ -112,10 +112,7 @@ impl Transport for SSEServerTransport {
 
         Ok(())
     }
-}
 
-#[async_trait::async_trait]
-impl ReceiveTransport for SSEServerTransport {
     async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error> {
         if !self.started {
             return Err(SSETransportError::NotStarted);

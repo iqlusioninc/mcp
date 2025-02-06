@@ -1,7 +1,7 @@
 #![cfg(feature = "server")]
 use std::io::{BufRead, Write};
 
-use mcp_core::transport::{ReceiveTransport, Transport};
+use mcp_core::transport::Transport;
 use mcp_types::JSONRPCMessage;
 
 pub struct StdioServerTransport {
@@ -60,10 +60,7 @@ impl Transport for StdioServerTransport {
 
         Ok(())
     }
-}
 
-#[async_trait::async_trait]
-impl ReceiveTransport for StdioServerTransport {
     async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error> {
         if !self.started {
             return Err(std::io::Error::new(

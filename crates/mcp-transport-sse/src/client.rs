@@ -4,7 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use futures::TryStreamExt;
-use mcp_core::transport::{ReceiveTransport, Transport};
+use mcp_core::transport::Transport;
 use mcp_types::JSONRPCMessage;
 use reqwest::Client;
 use reqwest_websocket::{Message, RequestBuilderExt};
@@ -111,10 +111,7 @@ impl Transport for SSEClientTransport {
 
         Ok(())
     }
-}
 
-#[async_trait::async_trait]
-impl ReceiveTransport for SSEClientTransport {
     async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error> {
         if !self.started {
             return Err(SSETransportError::NotStarted);
