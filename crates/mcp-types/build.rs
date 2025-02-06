@@ -10,11 +10,7 @@ fn generate(version: &str) {
     let content = std::fs::read_to_string(schema_path).unwrap();
     let schema = serde_json::from_str::<schemars::schema::RootSchema>(&content).unwrap();
 
-    let mut type_space = TypeSpace::new(
-        TypeSpaceSettings::default()
-            .with_struct_builder(false)
-            .with_derive("PartialEq".to_string()),
-    );
+    let mut type_space = TypeSpace::new(TypeSpaceSettings::default().with_struct_builder(false).with_derive("PartialEq".to_string()));
     type_space.add_root_schema(schema).unwrap();
 
     let contents = syn::parse2::<syn::File>(type_space.to_stream()).unwrap();
@@ -22,13 +18,7 @@ fn generate(version: &str) {
 
     let file_name = format!("src/v{}.rs", version.replace("-", "_"));
     let mut out_file = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).to_path_buf();
-    out_file.push(&file_name);
+    out_file.push(file_name);
 
-    fs::write(&out_file, contents).unwrap();
-
-    // Run cargo fmt on the generated file
-    std::process::Command::new("cargo")
-        .args(["fmt", "--", &file_name])
-        .status()
-        .expect("Failed to run cargo fmt");
+    fs::write(out_file, contents).unwrap();
 }
