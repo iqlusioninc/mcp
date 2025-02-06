@@ -22,7 +22,13 @@ fn generate(version: &str) {
 
     let file_name = format!("src/v{}.rs", version.replace("-", "_"));
     let mut out_file = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).to_path_buf();
-    out_file.push(file_name);
+    out_file.push(&file_name);
 
-    fs::write(out_file, contents).unwrap();
+    fs::write(&out_file, contents).unwrap();
+
+    // Run cargo fmt on the generated file
+    std::process::Command::new("cargo")
+        .args(["fmt", "--", &file_name])
+        .status()
+        .expect("Failed to run cargo fmt");
 }
