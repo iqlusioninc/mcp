@@ -4,18 +4,12 @@ pub mod error {
     pub struct ConversionError(::std::borrow::Cow<'static, str>);
     impl ::std::error::Error for ConversionError {}
     impl ::std::fmt::Display for ConversionError {
-        fn fmt(
-            &self,
-            f: &mut ::std::fmt::Formatter<'_>,
-        ) -> Result<(), ::std::fmt::Error> {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
             ::std::fmt::Display::fmt(&self.0, f)
         }
     }
     impl ::std::fmt::Debug for ConversionError {
-        fn fmt(
-            &self,
-            f: &mut ::std::fmt::Formatter<'_>,
-        ) -> Result<(), ::std::fmt::Error> {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
             ::std::fmt::Debug::fmt(&self.0, f)
         }
     }
@@ -61,7 +55,7 @@ pub mod error {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Annotated {
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub annotations: ::std::option::Option<AnnotatedAnnotations>,
@@ -103,11 +97,11 @@ impl ::std::default::Default for Annotated {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct AnnotatedAnnotations {
     /**Describes who the intended customer of this object or data is.
 
-It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
+    It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub audience: ::std::vec::Vec<Role>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -156,7 +150,7 @@ impl ::std::default::Default for AnnotatedAnnotations {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct BlobResourceContents {
     ///A base64-encoded string representing the binary data of the item.
     pub blob: ::std::string::String,
@@ -211,7 +205,7 @@ impl ::std::convert::From<&BlobResourceContents> for BlobResourceContents {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CallToolRequest {
     pub method: ::std::string::String,
     pub params: CallToolRequestParams,
@@ -243,7 +237,7 @@ impl ::std::convert::From<&CallToolRequest> for CallToolRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CallToolRequestParams {
     #[serde(default, skip_serializing_if = "::serde_json::Map::is_empty")]
     pub arguments: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
@@ -304,12 +298,12 @@ should be reported as an MCP error response.*/
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CallToolResult {
     pub content: ::std::vec::Vec<CallToolResultContentItem>,
     /**Whether the tool call ended in an error.
 
-If not set, this is assumed to be false (the call was successful).*/
+    If not set, this is assumed to be false (the call was successful).*/
     #[serde(
         rename = "isError",
         default,
@@ -349,7 +343,7 @@ impl ::std::convert::From<&CallToolResult> for CallToolResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum CallToolResultContentItem {
     TextContent(TextContent),
@@ -419,7 +413,7 @@ A client MUST NOT attempt to cancel its `initialize` request.*/
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CancelledNotification {
     pub method: ::std::string::String,
     pub params: CancelledNotificationParams,
@@ -452,14 +446,14 @@ impl ::std::convert::From<&CancelledNotification> for CancelledNotification {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CancelledNotificationParams {
     ///An optional string describing the reason for the cancellation. This MAY be logged or presented to the user.
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub reason: ::std::option::Option<::std::string::String>,
     /**The ID of the request to cancel.
 
-This MUST correspond to the ID of a request previously issued in the same direction.*/
+    This MUST correspond to the ID of a request previously issued in the same direction.*/
     #[serde(rename = "requestId")]
     pub request_id: RequestId,
 }
@@ -504,10 +498,13 @@ impl ::std::convert::From<&CancelledNotificationParams> for CancelledNotificatio
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ClientCapabilities {
     ///Experimental, non-standard capabilities that the client supports.
-    #[serde(default, skip_serializing_if = ":: std :: collections :: HashMap::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+    )]
     pub experimental: ::std::collections::HashMap<
         ::std::string::String,
         ::serde_json::Map<::std::string::String, ::serde_json::Value>,
@@ -549,7 +546,7 @@ impl ::std::default::Default for ClientCapabilities {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ClientCapabilitiesRoots {
     ///Whether the client supports notifications for changes to the roots list.
     #[serde(
@@ -594,7 +591,7 @@ impl ::std::default::Default for ClientCapabilitiesRoots {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ClientNotification {
     CancelledNotification(CancelledNotification),
@@ -677,7 +674,7 @@ impl ::std::convert::From<RootsListChangedNotification> for ClientNotification {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ClientRequest {
     InitializeRequest(InitializeRequest),
@@ -784,7 +781,7 @@ impl ::std::convert::From<CompleteRequest> for ClientRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ClientResult {
     Result(Result),
@@ -869,7 +866,7 @@ impl ::std::convert::From<ListRootsResult> for ClientResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CompleteRequest {
     pub method: ::std::string::String,
     pub params: CompleteRequestParams,
@@ -923,7 +920,7 @@ impl ::std::convert::From<&CompleteRequest> for CompleteRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CompleteRequestParams {
     pub argument: CompleteRequestParamsArgument,
     #[serde(rename = "ref")]
@@ -959,15 +956,14 @@ impl ::std::convert::From<&CompleteRequestParams> for CompleteRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CompleteRequestParamsArgument {
     ///The name of the argument
     pub name: ::std::string::String,
     ///The value of the argument to use for completion matching.
     pub value: ::std::string::String,
 }
-impl ::std::convert::From<&CompleteRequestParamsArgument>
-for CompleteRequestParamsArgument {
+impl ::std::convert::From<&CompleteRequestParamsArgument> for CompleteRequestParamsArgument {
     fn from(value: &CompleteRequestParamsArgument) -> Self {
         value.clone()
     }
@@ -989,7 +985,7 @@ for CompleteRequestParamsArgument {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum CompleteRequestParamsRef {
     PromptReference(PromptReference),
@@ -1054,7 +1050,7 @@ impl ::std::convert::From<ResourceReference> for CompleteRequestParamsRef {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CompleteResult {
     pub completion: CompleteResultCompletion,
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
@@ -1100,7 +1096,7 @@ impl ::std::convert::From<&CompleteResult> for CompleteResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CompleteResultCompletion {
     ///Indicates whether there are additional completion options beyond those provided in the current response, even if the exact total is unknown.
     #[serde(
@@ -1191,7 +1187,7 @@ impl ::std::convert::From<&CompleteResultCompletion> for CompleteResultCompletio
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CreateMessageRequest {
     pub method: ::std::string::String,
     pub params: CreateMessageRequestParams,
@@ -1258,7 +1254,7 @@ impl ::std::convert::From<&CreateMessageRequest> for CreateMessageRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CreateMessageRequestParams {
     ///A request to include context from one or more MCP servers (including the caller), to be attached to the prompt. The client MAY ignore this request.
     #[serde(
@@ -1328,7 +1324,7 @@ impl ::std::convert::From<&CreateMessageRequestParams> for CreateMessageRequestP
     Hash,
     Ord,
     PartialEq,
-    PartialOrd
+    PartialOrd,
 )]
 pub enum CreateMessageRequestParamsIncludeContext {
     #[serde(rename = "allServers")]
@@ -1354,9 +1350,7 @@ impl ::std::fmt::Display for CreateMessageRequestParamsIncludeContext {
 }
 impl ::std::str::FromStr for CreateMessageRequestParamsIncludeContext {
     type Err = self::error::ConversionError;
-    fn from_str(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         match value {
             "allServers" => Ok(Self::AllServers),
             "none" => Ok(Self::None),
@@ -1367,14 +1361,11 @@ impl ::std::str::FromStr for CreateMessageRequestParamsIncludeContext {
 }
 impl ::std::convert::TryFrom<&str> for CreateMessageRequestParamsIncludeContext {
     type Error = self::error::ConversionError;
-    fn try_from(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
-impl ::std::convert::TryFrom<&::std::string::String>
-for CreateMessageRequestParamsIncludeContext {
+impl ::std::convert::TryFrom<&::std::string::String> for CreateMessageRequestParamsIncludeContext {
     type Error = self::error::ConversionError;
     fn try_from(
         value: &::std::string::String,
@@ -1382,8 +1373,7 @@ for CreateMessageRequestParamsIncludeContext {
         value.parse()
     }
 }
-impl ::std::convert::TryFrom<::std::string::String>
-for CreateMessageRequestParamsIncludeContext {
+impl ::std::convert::TryFrom<::std::string::String> for CreateMessageRequestParamsIncludeContext {
     type Error = self::error::ConversionError;
     fn try_from(
         value: ::std::string::String,
@@ -1435,7 +1425,7 @@ for CreateMessageRequestParamsIncludeContext {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CreateMessageResult {
     pub content: CreateMessageResultContent,
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
@@ -1478,7 +1468,7 @@ impl ::std::convert::From<&CreateMessageResult> for CreateMessageResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum CreateMessageResultContent {
     TextContent(TextContent),
@@ -1511,15 +1501,7 @@ impl ::std::convert::From<ImageContent> for CreateMessageResultContent {
 /// ```
 /// </details>
 #[derive(
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd
+    ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 )]
 #[serde(transparent)]
 pub struct Cursor(pub ::std::string::String);
@@ -1607,7 +1589,7 @@ of the LLM and/or the user.*/
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct EmbeddedResource {
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub annotations: ::std::option::Option<EmbeddedResourceAnnotations>,
@@ -1645,11 +1627,11 @@ impl ::std::convert::From<&EmbeddedResource> for EmbeddedResource {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct EmbeddedResourceAnnotations {
     /**Describes who the intended customer of this object or data is.
 
-It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
+    It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub audience: ::std::vec::Vec<Role>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -1685,7 +1667,7 @@ impl ::std::default::Default for EmbeddedResourceAnnotations {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum EmbeddedResourceResource {
     TextResourceContents(TextResourceContents),
@@ -1716,7 +1698,7 @@ impl ::std::convert::From<BlobResourceContents> for EmbeddedResourceResource {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(transparent)]
 pub struct EmptyResult(pub Result);
 impl ::std::ops::Deref for EmptyResult {
@@ -1780,7 +1762,7 @@ impl ::std::convert::From<Result> for EmptyResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct GetPromptRequest {
     pub method: ::std::string::String,
     pub params: GetPromptRequestParams,
@@ -1816,14 +1798,14 @@ impl ::std::convert::From<&GetPromptRequest> for GetPromptRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct GetPromptRequestParams {
     ///Arguments to use for templating the prompt.
-    #[serde(default, skip_serializing_if = ":: std :: collections :: HashMap::is_empty")]
-    pub arguments: ::std::collections::HashMap<
-        ::std::string::String,
-        ::std::string::String,
-    >,
+    #[serde(
+        default,
+        skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+    )]
+    pub arguments: ::std::collections::HashMap<::std::string::String, ::std::string::String>,
     ///The name of the prompt or prompt template.
     pub name: ::std::string::String,
 }
@@ -1863,7 +1845,7 @@ impl ::std::convert::From<&GetPromptRequestParams> for GetPromptRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct GetPromptResult {
     ///An optional description for the prompt.
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -1931,7 +1913,7 @@ impl ::std::convert::From<&GetPromptResult> for GetPromptResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ImageContent {
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub annotations: ::std::option::Option<ImageContentAnnotations>,
@@ -1973,11 +1955,11 @@ impl ::std::convert::From<&ImageContent> for ImageContent {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ImageContentAnnotations {
     /**Describes who the intended customer of this object or data is.
 
-It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
+    It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub audience: ::std::vec::Vec<Role>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2019,7 +2001,7 @@ impl ::std::default::Default for ImageContentAnnotations {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Implementation {
     pub name: ::std::string::String,
     pub version: ::std::string::String,
@@ -2070,7 +2052,7 @@ impl ::std::convert::From<&Implementation> for Implementation {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct InitializeRequest {
     pub method: ::std::string::String,
     pub params: InitializeRequestParams,
@@ -2107,7 +2089,7 @@ impl ::std::convert::From<&InitializeRequest> for InitializeRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct InitializeRequestParams {
     pub capabilities: ClientCapabilities,
     #[serde(rename = "clientInfo")]
@@ -2158,12 +2140,12 @@ impl ::std::convert::From<&InitializeRequestParams> for InitializeRequestParams 
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct InitializeResult {
     pub capabilities: ServerCapabilities,
     /**Instructions describing how to use the server and its features.
 
-This can be used by clients to improve the LLM's understanding of available tools, resources, etc. It can be thought of like a "hint" to the model. For example, this information MAY be added to the system prompt.*/
+    This can be used by clients to improve the LLM's understanding of available tools, resources, etc. It can be thought of like a "hint" to the model. For example, this information MAY be added to the system prompt.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub instructions: ::std::option::Option<::std::string::String>,
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
@@ -2215,7 +2197,7 @@ impl ::std::convert::From<&InitializeResult> for InitializeResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct InitializedNotification {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2244,7 +2226,7 @@ impl ::std::convert::From<&InitializedNotification> for InitializedNotification 
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct InitializedNotificationParams {
     ///This parameter name is reserved by MCP to allow clients and servers to attach additional metadata to their notifications.
     #[serde(
@@ -2254,15 +2236,16 @@ pub struct InitializedNotificationParams {
     )]
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
 }
-impl ::std::convert::From<&InitializedNotificationParams>
-for InitializedNotificationParams {
+impl ::std::convert::From<&InitializedNotificationParams> for InitializedNotificationParams {
     fn from(value: &InitializedNotificationParams) -> Self {
         value.clone()
     }
 }
 impl ::std::default::Default for InitializedNotificationParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///A response to a request that indicates an error occurred.
@@ -2310,7 +2293,7 @@ impl ::std::default::Default for InitializedNotificationParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct JsonrpcError {
     pub error: JsonrpcErrorError,
     pub id: RequestId,
@@ -2348,7 +2331,7 @@ impl ::std::convert::From<&JsonrpcError> for JsonrpcError {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct JsonrpcErrorError {
     ///The error type that occurred.
     pub code: i64,
@@ -2386,7 +2369,7 @@ impl ::std::convert::From<&JsonrpcErrorError> for JsonrpcErrorError {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum JsonrpcMessage {
     Request(JsonrpcRequest),
@@ -2454,7 +2437,7 @@ impl ::std::convert::From<JsonrpcError> for JsonrpcMessage {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct JsonrpcNotification {
     pub jsonrpc: ::std::string::String,
     pub method: ::std::string::String,
@@ -2484,7 +2467,7 @@ impl ::std::convert::From<&JsonrpcNotification> for JsonrpcNotification {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct JsonrpcNotificationParams {
     ///This parameter name is reserved by MCP to allow clients and servers to attach additional metadata to their notifications.
     #[serde(
@@ -2501,7 +2484,9 @@ impl ::std::convert::From<&JsonrpcNotificationParams> for JsonrpcNotificationPar
 }
 impl ::std::default::Default for JsonrpcNotificationParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///A request that expects a response.
@@ -2547,7 +2532,7 @@ impl ::std::default::Default for JsonrpcNotificationParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct JsonrpcRequest {
     pub id: RequestId,
     pub jsonrpc: ::std::string::String,
@@ -2582,7 +2567,7 @@ impl ::std::convert::From<&JsonrpcRequest> for JsonrpcRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct JsonrpcRequestParams {
     #[serde(
         rename = "_meta",
@@ -2598,7 +2583,9 @@ impl ::std::convert::From<&JsonrpcRequestParams> for JsonrpcRequestParams {
 }
 impl ::std::default::Default for JsonrpcRequestParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///JsonrpcRequestParamsMeta
@@ -2617,7 +2604,7 @@ impl ::std::default::Default for JsonrpcRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct JsonrpcRequestParamsMeta {
     ///If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
     #[serde(
@@ -2667,7 +2654,7 @@ impl ::std::default::Default for JsonrpcRequestParamsMeta {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct JsonrpcResponse {
     pub id: RequestId,
     pub jsonrpc: ::std::string::String,
@@ -2707,7 +2694,7 @@ impl ::std::convert::From<&JsonrpcResponse> for JsonrpcResponse {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListPromptsRequest {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2734,10 +2721,10 @@ impl ::std::convert::From<&ListPromptsRequest> for ListPromptsRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListPromptsRequestParams {
     /**An opaque token representing the current pagination position.
-If provided, the server should return results starting after this cursor.*/
+    If provided, the server should return results starting after this cursor.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub cursor: ::std::option::Option<::std::string::String>,
 }
@@ -2748,7 +2735,9 @@ impl ::std::convert::From<&ListPromptsRequestParams> for ListPromptsRequestParam
 }
 impl ::std::default::Default for ListPromptsRequestParams {
     fn default() -> Self {
-        Self { cursor: Default::default() }
+        Self {
+            cursor: Default::default(),
+        }
     }
 }
 ///The server's response to a prompts/list request from the client.
@@ -2782,7 +2771,7 @@ impl ::std::default::Default for ListPromptsRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListPromptsResult {
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
     #[serde(
@@ -2792,7 +2781,7 @@ pub struct ListPromptsResult {
     )]
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
     /**An opaque token representing the pagination position after the last returned result.
-If present, there may be more results available.*/
+    If present, there may be more results available.*/
     #[serde(
         rename = "nextCursor",
         default,
@@ -2835,14 +2824,13 @@ impl ::std::convert::From<&ListPromptsResult> for ListPromptsResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListResourceTemplatesRequest {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub params: ::std::option::Option<ListResourceTemplatesRequestParams>,
 }
-impl ::std::convert::From<&ListResourceTemplatesRequest>
-for ListResourceTemplatesRequest {
+impl ::std::convert::From<&ListResourceTemplatesRequest> for ListResourceTemplatesRequest {
     fn from(value: &ListResourceTemplatesRequest) -> Self {
         value.clone()
     }
@@ -2863,22 +2851,25 @@ for ListResourceTemplatesRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListResourceTemplatesRequestParams {
     /**An opaque token representing the current pagination position.
-If provided, the server should return results starting after this cursor.*/
+    If provided, the server should return results starting after this cursor.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub cursor: ::std::option::Option<::std::string::String>,
 }
 impl ::std::convert::From<&ListResourceTemplatesRequestParams>
-for ListResourceTemplatesRequestParams {
+    for ListResourceTemplatesRequestParams
+{
     fn from(value: &ListResourceTemplatesRequestParams) -> Self {
         value.clone()
     }
 }
 impl ::std::default::Default for ListResourceTemplatesRequestParams {
     fn default() -> Self {
-        Self { cursor: Default::default() }
+        Self {
+            cursor: Default::default(),
+        }
     }
 }
 ///The server's response to a resources/templates/list request from the client.
@@ -2912,7 +2903,7 @@ impl ::std::default::Default for ListResourceTemplatesRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListResourceTemplatesResult {
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
     #[serde(
@@ -2922,7 +2913,7 @@ pub struct ListResourceTemplatesResult {
     )]
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
     /**An opaque token representing the pagination position after the last returned result.
-If present, there may be more results available.*/
+    If present, there may be more results available.*/
     #[serde(
         rename = "nextCursor",
         default,
@@ -2966,7 +2957,7 @@ impl ::std::convert::From<&ListResourceTemplatesResult> for ListResourceTemplate
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListResourcesRequest {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2993,10 +2984,10 @@ impl ::std::convert::From<&ListResourcesRequest> for ListResourcesRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListResourcesRequestParams {
     /**An opaque token representing the current pagination position.
-If provided, the server should return results starting after this cursor.*/
+    If provided, the server should return results starting after this cursor.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub cursor: ::std::option::Option<::std::string::String>,
 }
@@ -3007,7 +2998,9 @@ impl ::std::convert::From<&ListResourcesRequestParams> for ListResourcesRequestP
 }
 impl ::std::default::Default for ListResourcesRequestParams {
     fn default() -> Self {
-        Self { cursor: Default::default() }
+        Self {
+            cursor: Default::default(),
+        }
     }
 }
 ///The server's response to a resources/list request from the client.
@@ -3041,7 +3034,7 @@ impl ::std::default::Default for ListResourcesRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListResourcesResult {
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
     #[serde(
@@ -3051,7 +3044,7 @@ pub struct ListResourcesResult {
     )]
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
     /**An opaque token representing the pagination position after the last returned result.
-If present, there may be more results available.*/
+    If present, there may be more results available.*/
     #[serde(
         rename = "nextCursor",
         default,
@@ -3106,7 +3099,7 @@ structure or access specific locations that the client has permission to read fr
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListRootsRequest {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -3139,7 +3132,7 @@ impl ::std::convert::From<&ListRootsRequest> for ListRootsRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListRootsRequestParams {
     #[serde(
         rename = "_meta",
@@ -3155,7 +3148,9 @@ impl ::std::convert::From<&ListRootsRequestParams> for ListRootsRequestParams {
 }
 impl ::std::default::Default for ListRootsRequestParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///ListRootsRequestParamsMeta
@@ -3174,7 +3169,7 @@ impl ::std::default::Default for ListRootsRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListRootsRequestParamsMeta {
     ///If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
     #[serde(
@@ -3225,7 +3220,7 @@ or file that the server can operate on.*/
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListRootsResult {
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
     #[serde(
@@ -3270,7 +3265,7 @@ impl ::std::convert::From<&ListRootsResult> for ListRootsResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListToolsRequest {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -3297,10 +3292,10 @@ impl ::std::convert::From<&ListToolsRequest> for ListToolsRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListToolsRequestParams {
     /**An opaque token representing the current pagination position.
-If provided, the server should return results starting after this cursor.*/
+    If provided, the server should return results starting after this cursor.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub cursor: ::std::option::Option<::std::string::String>,
 }
@@ -3311,7 +3306,9 @@ impl ::std::convert::From<&ListToolsRequestParams> for ListToolsRequestParams {
 }
 impl ::std::default::Default for ListToolsRequestParams {
     fn default() -> Self {
-        Self { cursor: Default::default() }
+        Self {
+            cursor: Default::default(),
+        }
     }
 }
 ///The server's response to a tools/list request from the client.
@@ -3345,7 +3342,7 @@ impl ::std::default::Default for ListToolsRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ListToolsResult {
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
     #[serde(
@@ -3355,7 +3352,7 @@ pub struct ListToolsResult {
     )]
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
     /**An opaque token representing the pagination position after the last returned result.
-If present, there may be more results available.*/
+    If present, there may be more results available.*/
     #[serde(
         rename = "nextCursor",
         default,
@@ -3403,7 +3400,7 @@ https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1*/
     Hash,
     Ord,
     PartialEq,
-    PartialOrd
+    PartialOrd,
 )]
 pub enum LoggingLevel {
     #[serde(rename = "alert")]
@@ -3444,9 +3441,7 @@ impl ::std::fmt::Display for LoggingLevel {
 }
 impl ::std::str::FromStr for LoggingLevel {
     type Err = self::error::ConversionError;
-    fn from_str(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         match value {
             "alert" => Ok(Self::Alert),
             "critical" => Ok(Self::Critical),
@@ -3462,9 +3457,7 @@ impl ::std::str::FromStr for LoggingLevel {
 }
 impl ::std::convert::TryFrom<&str> for LoggingLevel {
     type Error = self::error::ConversionError;
-    fn try_from(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -3525,7 +3518,7 @@ impl ::std::convert::TryFrom<::std::string::String> for LoggingLevel {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct LoggingMessageNotification {
     pub method: ::std::string::String,
     pub params: LoggingMessageNotificationParams,
@@ -3562,7 +3555,7 @@ impl ::std::convert::From<&LoggingMessageNotification> for LoggingMessageNotific
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct LoggingMessageNotificationParams {
     ///The data to be logged, such as a string message or an object. Any JSON serializable type is allowed here.
     pub data: ::serde_json::Value,
@@ -3572,8 +3565,7 @@ pub struct LoggingMessageNotificationParams {
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub logger: ::std::option::Option<::std::string::String>,
 }
-impl ::std::convert::From<&LoggingMessageNotificationParams>
-for LoggingMessageNotificationParams {
+impl ::std::convert::From<&LoggingMessageNotificationParams> for LoggingMessageNotificationParams {
     fn from(value: &LoggingMessageNotificationParams) -> Self {
         value.clone()
     }
@@ -3598,17 +3590,17 @@ to the client to interpret.*/
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ModelHint {
     /**A hint for a model name.
 
-The client SHOULD treat this as a substring of a model name; for example:
- - `claude-3-5-sonnet` should match `claude-3-5-sonnet-20241022`
- - `sonnet` should match `claude-3-5-sonnet-20241022`, `claude-3-sonnet-20240229`, etc.
- - `claude` should match any Claude model
+    The client SHOULD treat this as a substring of a model name; for example:
+     - `claude-3-5-sonnet` should match `claude-3-5-sonnet-20241022`
+     - `sonnet` should match `claude-3-5-sonnet-20241022`, `claude-3-sonnet-20240229`, etc.
+     - `claude` should match any Claude model
 
-The client MAY also map the string to a different provider's model name or a different model family, as long as it fills a similar niche; for example:
- - `gemini-1.5-flash` could match `claude-3-haiku-20240307`*/
+    The client MAY also map the string to a different provider's model name or a different model family, as long as it fills a similar niche; for example:
+     - `gemini-1.5-flash` could match `claude-3-haiku-20240307`*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub name: ::std::option::Option<::std::string::String>,
 }
@@ -3619,7 +3611,9 @@ impl ::std::convert::From<&ModelHint> for ModelHint {
 }
 impl ::std::default::Default for ModelHint {
     fn default() -> Self {
-        Self { name: Default::default() }
+        Self {
+            name: Default::default(),
+        }
     }
 }
 /**The server's preferences for model selection, requested of the client during sampling.
@@ -3670,7 +3664,7 @@ balance them against other considerations.*/
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ModelPreferences {
     #[serde(
         rename = "costPriority",
@@ -3680,11 +3674,11 @@ pub struct ModelPreferences {
     pub cost_priority: ::std::option::Option<f64>,
     /**Optional hints to use for model selection.
 
-If multiple hints are specified, the client MUST evaluate them in order
-(such that the first match is taken).
+    If multiple hints are specified, the client MUST evaluate them in order
+    (such that the first match is taken).
 
-The client SHOULD prioritize these hints over the numeric priorities, but
-MAY still use the priorities to select from ambiguous matches.*/
+    The client SHOULD prioritize these hints over the numeric priorities, but
+    MAY still use the priorities to select from ambiguous matches.*/
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub hints: ::std::vec::Vec<ModelHint>,
     #[serde(
@@ -3744,7 +3738,7 @@ impl ::std::default::Default for ModelPreferences {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Notification {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -3773,7 +3767,7 @@ impl ::std::convert::From<&Notification> for Notification {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct NotificationParams {
     ///This parameter name is reserved by MCP to allow clients and servers to attach additional metadata to their notifications.
     #[serde(
@@ -3790,7 +3784,9 @@ impl ::std::convert::From<&NotificationParams> for NotificationParams {
 }
 impl ::std::default::Default for NotificationParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///PaginatedRequest
@@ -3820,7 +3816,7 @@ impl ::std::default::Default for NotificationParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PaginatedRequest {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -3847,10 +3843,10 @@ impl ::std::convert::From<&PaginatedRequest> for PaginatedRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PaginatedRequestParams {
     /**An opaque token representing the current pagination position.
-If provided, the server should return results starting after this cursor.*/
+    If provided, the server should return results starting after this cursor.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub cursor: ::std::option::Option<::std::string::String>,
 }
@@ -3861,7 +3857,9 @@ impl ::std::convert::From<&PaginatedRequestParams> for PaginatedRequestParams {
 }
 impl ::std::default::Default for PaginatedRequestParams {
     fn default() -> Self {
-        Self { cursor: Default::default() }
+        Self {
+            cursor: Default::default(),
+        }
     }
 }
 ///PaginatedResult
@@ -3885,7 +3883,7 @@ impl ::std::default::Default for PaginatedRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PaginatedResult {
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
     #[serde(
@@ -3895,7 +3893,7 @@ pub struct PaginatedResult {
     )]
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
     /**An opaque token representing the pagination position after the last returned result.
-If present, there may be more results available.*/
+    If present, there may be more results available.*/
     #[serde(
         rename = "nextCursor",
         default,
@@ -3951,7 +3949,7 @@ impl ::std::default::Default for PaginatedResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PingRequest {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -3984,7 +3982,7 @@ impl ::std::convert::From<&PingRequest> for PingRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PingRequestParams {
     #[serde(
         rename = "_meta",
@@ -4000,7 +3998,9 @@ impl ::std::convert::From<&PingRequestParams> for PingRequestParams {
 }
 impl ::std::default::Default for PingRequestParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///PingRequestParamsMeta
@@ -4019,7 +4019,7 @@ impl ::std::default::Default for PingRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PingRequestParamsMeta {
     ///If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
     #[serde(
@@ -4083,7 +4083,7 @@ impl ::std::default::Default for PingRequestParamsMeta {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ProgressNotification {
     pub method: ::std::string::String,
     pub params: ProgressNotificationParams,
@@ -4121,7 +4121,7 @@ impl ::std::convert::From<&ProgressNotification> for ProgressNotification {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ProgressNotificationParams {
     pub progress: f64,
     ///The progress token which was given in the initial request, used to associate this notification with the request that is proceeding.
@@ -4149,7 +4149,7 @@ impl ::std::convert::From<&ProgressNotificationParams> for ProgressNotificationP
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ProgressToken {
     String(::std::string::String),
@@ -4162,9 +4162,7 @@ impl ::std::convert::From<&Self> for ProgressToken {
 }
 impl ::std::str::FromStr for ProgressToken {
     type Err = self::error::ConversionError;
-    fn from_str(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         if let Ok(v) = value.parse() {
             Ok(Self::String(v))
         } else if let Ok(v) = value.parse() {
@@ -4176,9 +4174,7 @@ impl ::std::str::FromStr for ProgressToken {
 }
 impl ::std::convert::TryFrom<&str> for ProgressToken {
     type Error = self::error::ConversionError;
-    fn try_from(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -4242,7 +4238,7 @@ impl ::std::convert::From<i64> for ProgressToken {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Prompt {
     ///A list of arguments to use for templating the prompt.
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
@@ -4286,7 +4282,7 @@ impl ::std::convert::From<&Prompt> for Prompt {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PromptArgument {
     ///A human-readable description of the argument.
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -4333,14 +4329,13 @@ impl ::std::convert::From<&PromptArgument> for PromptArgument {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PromptListChangedNotification {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub params: ::std::option::Option<PromptListChangedNotificationParams>,
 }
-impl ::std::convert::From<&PromptListChangedNotification>
-for PromptListChangedNotification {
+impl ::std::convert::From<&PromptListChangedNotification> for PromptListChangedNotification {
     fn from(value: &PromptListChangedNotification) -> Self {
         value.clone()
     }
@@ -4363,7 +4358,7 @@ for PromptListChangedNotification {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PromptListChangedNotificationParams {
     ///This parameter name is reserved by MCP to allow clients and servers to attach additional metadata to their notifications.
     #[serde(
@@ -4374,14 +4369,17 @@ pub struct PromptListChangedNotificationParams {
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
 }
 impl ::std::convert::From<&PromptListChangedNotificationParams>
-for PromptListChangedNotificationParams {
+    for PromptListChangedNotificationParams
+{
     fn from(value: &PromptListChangedNotificationParams) -> Self {
         value.clone()
     }
 }
 impl ::std::default::Default for PromptListChangedNotificationParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 /**Describes a message returned as part of a prompt.
@@ -4420,7 +4418,7 @@ resources from the MCP server.*/
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PromptMessage {
     pub content: PromptMessageContent,
     pub role: Role,
@@ -4450,7 +4448,7 @@ impl ::std::convert::From<&PromptMessage> for PromptMessage {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum PromptMessageContent {
     TextContent(TextContent),
@@ -4502,7 +4500,7 @@ impl ::std::convert::From<EmbeddedResource> for PromptMessageContent {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PromptReference {
     ///The name of the prompt or prompt template
     pub name: ::std::string::String,
@@ -4548,7 +4546,7 @@ impl ::std::convert::From<&PromptReference> for PromptReference {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ReadResourceRequest {
     pub method: ::std::string::String,
     pub params: ReadResourceRequestParams,
@@ -4578,7 +4576,7 @@ impl ::std::convert::From<&ReadResourceRequest> for ReadResourceRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ReadResourceRequestParams {
     ///The URI of the resource to read. The URI can use any protocol; it is up to the server how to interpret it.
     pub uri: ::std::string::String,
@@ -4622,7 +4620,7 @@ impl ::std::convert::From<&ReadResourceRequestParams> for ReadResourceRequestPar
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ReadResourceResult {
     pub contents: ::std::vec::Vec<ReadResourceResultContentsItem>,
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
@@ -4655,7 +4653,7 @@ impl ::std::convert::From<&ReadResourceResult> for ReadResourceResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ReadResourceResultContentsItem {
     TextResourceContents(TextResourceContents),
@@ -4709,7 +4707,7 @@ impl ::std::convert::From<BlobResourceContents> for ReadResourceResultContentsIt
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Request {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -4734,7 +4732,7 @@ impl ::std::convert::From<&Request> for Request {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum RequestId {
     String(::std::string::String),
@@ -4747,9 +4745,7 @@ impl ::std::convert::From<&Self> for RequestId {
 }
 impl ::std::str::FromStr for RequestId {
     type Err = self::error::ConversionError;
-    fn from_str(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         if let Ok(v) = value.parse() {
             Ok(Self::String(v))
         } else if let Ok(v) = value.parse() {
@@ -4761,9 +4757,7 @@ impl ::std::str::FromStr for RequestId {
 }
 impl ::std::convert::TryFrom<&str> for RequestId {
     type Error = self::error::ConversionError;
-    fn try_from(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -4818,7 +4812,7 @@ impl ::std::convert::From<i64> for RequestId {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct RequestParams {
     #[serde(
         rename = "_meta",
@@ -4834,7 +4828,9 @@ impl ::std::convert::From<&RequestParams> for RequestParams {
 }
 impl ::std::default::Default for RequestParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///RequestParamsMeta
@@ -4853,7 +4849,7 @@ impl ::std::default::Default for RequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct RequestParamsMeta {
     ///If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
     #[serde(
@@ -4931,13 +4927,13 @@ impl ::std::default::Default for RequestParamsMeta {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Resource {
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub annotations: ::std::option::Option<ResourceAnnotations>,
     /**A description of what this resource represents.
 
-This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.*/
+    This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub description: ::std::option::Option<::std::string::String>,
     ///The MIME type of this resource, if known.
@@ -4949,11 +4945,11 @@ This can be used by clients to improve the LLM's understanding of available reso
     pub mime_type: ::std::option::Option<::std::string::String>,
     /**A human-readable name for this resource.
 
-This can be used by clients to populate UI elements.*/
+    This can be used by clients to populate UI elements.*/
     pub name: ::std::string::String,
     /**The size of the raw resource content, in bytes (i.e., before base64 encoding or any tokenization), if known.
 
-This can be used by Hosts to display file sizes and estimate context window usage.*/
+    This can be used by Hosts to display file sizes and estimate context window usage.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub size: ::std::option::Option<i64>,
     ///The URI of this resource.
@@ -4989,11 +4985,11 @@ impl ::std::convert::From<&Resource> for Resource {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ResourceAnnotations {
     /**Describes who the intended customer of this object or data is.
 
-It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
+    It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub audience: ::std::vec::Vec<Role>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -5037,7 +5033,7 @@ impl ::std::default::Default for ResourceAnnotations {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ResourceContents {
     ///The MIME type of this resource, if known.
     #[serde(
@@ -5085,14 +5081,13 @@ impl ::std::convert::From<&ResourceContents> for ResourceContents {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ResourceListChangedNotification {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub params: ::std::option::Option<ResourceListChangedNotificationParams>,
 }
-impl ::std::convert::From<&ResourceListChangedNotification>
-for ResourceListChangedNotification {
+impl ::std::convert::From<&ResourceListChangedNotification> for ResourceListChangedNotification {
     fn from(value: &ResourceListChangedNotification) -> Self {
         value.clone()
     }
@@ -5115,7 +5110,7 @@ for ResourceListChangedNotification {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ResourceListChangedNotificationParams {
     ///This parameter name is reserved by MCP to allow clients and servers to attach additional metadata to their notifications.
     #[serde(
@@ -5126,14 +5121,17 @@ pub struct ResourceListChangedNotificationParams {
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
 }
 impl ::std::convert::From<&ResourceListChangedNotificationParams>
-for ResourceListChangedNotificationParams {
+    for ResourceListChangedNotificationParams
+{
     fn from(value: &ResourceListChangedNotificationParams) -> Self {
         value.clone()
     }
 }
 impl ::std::default::Default for ResourceListChangedNotificationParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///A reference to a resource or resource template definition.
@@ -5162,7 +5160,7 @@ impl ::std::default::Default for ResourceListChangedNotificationParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ResourceReference {
     #[serde(rename = "type")]
     pub type_: ::std::string::String,
@@ -5226,13 +5224,13 @@ impl ::std::convert::From<&ResourceReference> for ResourceReference {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ResourceTemplate {
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub annotations: ::std::option::Option<ResourceTemplateAnnotations>,
     /**A description of what this template is for.
 
-This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.*/
+    This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub description: ::std::option::Option<::std::string::String>,
     ///The MIME type for all resources that match this template. This should only be included if all resources matching this template have the same type.
@@ -5244,7 +5242,7 @@ This can be used by clients to improve the LLM's understanding of available reso
     pub mime_type: ::std::option::Option<::std::string::String>,
     /**A human-readable name for the type of resource this template refers to.
 
-This can be used by clients to populate UI elements.*/
+    This can be used by clients to populate UI elements.*/
     pub name: ::std::string::String,
     ///A URI template (according to RFC 6570) that can be used to construct resource URIs.
     #[serde(rename = "uriTemplate")]
@@ -5280,11 +5278,11 @@ impl ::std::convert::From<&ResourceTemplate> for ResourceTemplate {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ResourceTemplateAnnotations {
     /**Describes who the intended customer of this object or data is.
 
-It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
+    It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub audience: ::std::vec::Vec<Role>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -5337,7 +5335,7 @@ impl ::std::default::Default for ResourceTemplateAnnotations {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ResourceUpdatedNotification {
     pub method: ::std::string::String,
     pub params: ResourceUpdatedNotificationParams,
@@ -5367,13 +5365,14 @@ impl ::std::convert::From<&ResourceUpdatedNotification> for ResourceUpdatedNotif
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ResourceUpdatedNotificationParams {
     ///The URI of the resource that has been updated. This might be a sub-resource of the one that the client actually subscribed to.
     pub uri: ::std::string::String,
 }
 impl ::std::convert::From<&ResourceUpdatedNotificationParams>
-for ResourceUpdatedNotificationParams {
+    for ResourceUpdatedNotificationParams
+{
     fn from(value: &ResourceUpdatedNotificationParams) -> Self {
         value.clone()
     }
@@ -5396,7 +5395,7 @@ for ResourceUpdatedNotificationParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Result {
     ///This result property is reserved by the protocol to allow clients and servers to attach additional metadata to their responses.
     #[serde(
@@ -5413,7 +5412,9 @@ impl ::std::convert::From<&Result> for Result {
 }
 impl ::std::default::Default for Result {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///The sender or recipient of messages and data in a conversation.
@@ -5441,7 +5442,7 @@ impl ::std::default::Default for Result {
     Hash,
     Ord,
     PartialEq,
-    PartialOrd
+    PartialOrd,
 )]
 pub enum Role {
     #[serde(rename = "assistant")]
@@ -5464,9 +5465,7 @@ impl ::std::fmt::Display for Role {
 }
 impl ::std::str::FromStr for Role {
     type Err = self::error::ConversionError;
-    fn from_str(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         match value {
             "assistant" => Ok(Self::Assistant),
             "user" => Ok(Self::User),
@@ -5476,9 +5475,7 @@ impl ::std::str::FromStr for Role {
 }
 impl ::std::convert::TryFrom<&str> for Role {
     type Error = self::error::ConversionError;
-    fn try_from(
-        value: &str,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -5523,16 +5520,16 @@ impl ::std::convert::TryFrom<::std::string::String> for Role {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Root {
     /**An optional name for the root. This can be used to provide a human-readable
-identifier for the root, which may be useful for display purposes or for
-referencing the root in other parts of the application.*/
+    identifier for the root, which may be useful for display purposes or for
+    referencing the root in other parts of the application.*/
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub name: ::std::option::Option<::std::string::String>,
     /**The URI identifying the root. This *must* start with file:// for now.
-This restriction may be relaxed in future versions of the protocol to allow
-other URI schemes.*/
+    This restriction may be relaxed in future versions of the protocol to allow
+    other URI schemes.*/
     pub uri: ::std::string::String,
 }
 impl ::std::convert::From<&Root> for Root {
@@ -5573,14 +5570,13 @@ The server should then request an updated list of roots using the ListRootsReque
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct RootsListChangedNotification {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub params: ::std::option::Option<RootsListChangedNotificationParams>,
 }
-impl ::std::convert::From<&RootsListChangedNotification>
-for RootsListChangedNotification {
+impl ::std::convert::From<&RootsListChangedNotification> for RootsListChangedNotification {
     fn from(value: &RootsListChangedNotification) -> Self {
         value.clone()
     }
@@ -5603,7 +5599,7 @@ for RootsListChangedNotification {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct RootsListChangedNotificationParams {
     ///This parameter name is reserved by MCP to allow clients and servers to attach additional metadata to their notifications.
     #[serde(
@@ -5614,14 +5610,17 @@ pub struct RootsListChangedNotificationParams {
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
 }
 impl ::std::convert::From<&RootsListChangedNotificationParams>
-for RootsListChangedNotificationParams {
+    for RootsListChangedNotificationParams
+{
     fn from(value: &RootsListChangedNotificationParams) -> Self {
         value.clone()
     }
 }
 impl ::std::default::Default for RootsListChangedNotificationParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///Describes a message issued to or received from an LLM API.
@@ -5654,7 +5653,7 @@ impl ::std::default::Default for RootsListChangedNotificationParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SamplingMessage {
     pub content: SamplingMessageContent,
     pub role: Role,
@@ -5681,7 +5680,7 @@ impl ::std::convert::From<&SamplingMessage> for SamplingMessage {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum SamplingMessageContent {
     TextContent(TextContent),
@@ -5762,10 +5761,13 @@ impl ::std::convert::From<ImageContent> for SamplingMessageContent {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ServerCapabilities {
     ///Experimental, non-standard capabilities that the server supports.
-    #[serde(default, skip_serializing_if = ":: std :: collections :: HashMap::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+    )]
     pub experimental: ::std::collections::HashMap<
         ::std::string::String,
         ::serde_json::Map<::std::string::String, ::serde_json::Value>,
@@ -5813,7 +5815,7 @@ impl ::std::default::Default for ServerCapabilities {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ServerCapabilitiesPrompts {
     ///Whether this server supports notifications for changes to the prompt list.
     #[serde(
@@ -5856,7 +5858,7 @@ impl ::std::default::Default for ServerCapabilitiesPrompts {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ServerCapabilitiesResources {
     ///Whether this server supports notifications for changes to the resource list.
     #[serde(
@@ -5899,7 +5901,7 @@ impl ::std::default::Default for ServerCapabilitiesResources {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ServerCapabilitiesTools {
     ///Whether this server supports notifications for changes to the tool list.
     #[serde(
@@ -5953,7 +5955,7 @@ impl ::std::default::Default for ServerCapabilitiesTools {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ServerNotification {
     CancelledNotification(CancelledNotification),
@@ -6024,7 +6026,7 @@ impl ::std::convert::From<LoggingMessageNotification> for ServerNotification {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ServerRequest {
     PingRequest(PingRequest),
@@ -6092,7 +6094,7 @@ impl ::std::convert::From<ListRootsRequest> for ServerRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ServerResult {
     Result(Result),
@@ -6194,7 +6196,7 @@ impl ::std::convert::From<CompleteResult> for ServerResult {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SetLevelRequest {
     pub method: ::std::string::String,
     pub params: SetLevelRequestParams,
@@ -6223,7 +6225,7 @@ impl ::std::convert::From<&SetLevelRequest> for SetLevelRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SetLevelRequestParams {
     ///The level of logging that the client wants to receive from the server. The server should send all logs at this level and higher (i.e., more severe) to the client as notifications/logging/message.
     pub level: LoggingLevel,
@@ -6267,7 +6269,7 @@ impl ::std::convert::From<&SetLevelRequestParams> for SetLevelRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SubscribeRequest {
     pub method: ::std::string::String,
     pub params: SubscribeRequestParams,
@@ -6297,7 +6299,7 @@ impl ::std::convert::From<&SubscribeRequest> for SubscribeRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SubscribeRequestParams {
     ///The URI of the resource to subscribe to. The URI can use any protocol; it is up to the server how to interpret it.
     pub uri: ::std::string::String,
@@ -6350,7 +6352,7 @@ impl ::std::convert::From<&SubscribeRequestParams> for SubscribeRequestParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct TextContent {
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub annotations: ::std::option::Option<TextContentAnnotations>,
@@ -6389,11 +6391,11 @@ impl ::std::convert::From<&TextContent> for TextContent {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct TextContentAnnotations {
     /**Describes who the intended customer of this object or data is.
 
-It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
+    It can include multiple entries to indicate content useful for multiple audiences (e.g., `["user", "assistant"]`).*/
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub audience: ::std::vec::Vec<Role>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -6441,7 +6443,7 @@ impl ::std::default::Default for TextContentAnnotations {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct TextResourceContents {
     ///The MIME type of this resource, if known.
     #[serde(
@@ -6511,7 +6513,7 @@ impl ::std::convert::From<&TextResourceContents> for TextResourceContents {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Tool {
     ///A human-readable description of the tool.
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -6559,9 +6561,12 @@ impl ::std::convert::From<&Tool> for Tool {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ToolInputSchema {
-    #[serde(default, skip_serializing_if = ":: std :: collections :: HashMap::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+    )]
     pub properties: ::std::collections::HashMap<
         ::std::string::String,
         ::serde_json::Map<::std::string::String, ::serde_json::Value>,
@@ -6607,7 +6612,7 @@ impl ::std::convert::From<&ToolInputSchema> for ToolInputSchema {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ToolListChangedNotification {
     pub method: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -6636,7 +6641,7 @@ impl ::std::convert::From<&ToolListChangedNotification> for ToolListChangedNotif
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ToolListChangedNotificationParams {
     ///This parameter name is reserved by MCP to allow clients and servers to attach additional metadata to their notifications.
     #[serde(
@@ -6647,14 +6652,17 @@ pub struct ToolListChangedNotificationParams {
     pub meta: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
 }
 impl ::std::convert::From<&ToolListChangedNotificationParams>
-for ToolListChangedNotificationParams {
+    for ToolListChangedNotificationParams
+{
     fn from(value: &ToolListChangedNotificationParams) -> Self {
         value.clone()
     }
 }
 impl ::std::default::Default for ToolListChangedNotificationParams {
     fn default() -> Self {
-        Self { meta: Default::default() }
+        Self {
+            meta: Default::default(),
+        }
     }
 }
 ///Sent from the client to request cancellation of resources/updated notifications from the server. This should follow a previous resources/subscribe request.
@@ -6691,7 +6699,7 @@ impl ::std::default::Default for ToolListChangedNotificationParams {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct UnsubscribeRequest {
     pub method: ::std::string::String,
     pub params: UnsubscribeRequestParams,
@@ -6721,7 +6729,7 @@ impl ::std::convert::From<&UnsubscribeRequest> for UnsubscribeRequest {
 ///}
 /// ```
 /// </details>
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct UnsubscribeRequestParams {
     ///The URI of the resource to unsubscribe from.
     pub uri: ::std::string::String,
