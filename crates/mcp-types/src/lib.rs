@@ -25,10 +25,12 @@ mod v2024_11_05;
 
 /// Re-export of the types module.
 #[cfg(feature = "2024_11_05")]
-pub use v2024_11_05::{
+pub use v2024_11_05::types::{
     JsonrpcError as JSONRPCError, JsonrpcErrorError as JSONRPCInnerError,
     JsonrpcMessage as JSONRPCMessage, JsonrpcNotification as JSONRPCNotification,
     JsonrpcNotificationParams as JSONRPCNotificationParams, JsonrpcRequest as JSONRPCRequest,
     JsonrpcRequestParams as JSONRPCRequestParams,
     JsonrpcRequestParamsMeta as JSONRPCRequestParamsMeta, JsonrpcResponse as JSONRPCResponse, *,
 };
+
+pub use v2024_11_05::messages::*;

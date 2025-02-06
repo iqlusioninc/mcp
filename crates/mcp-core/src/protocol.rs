@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 
 use mcp_types::{
-    JSONRPCError, JSONRPCNotification, JSONRPCNotificationParams, JSONRPCRequest,
-    JSONRPCRequestParams, JSONRPCRequestParamsMeta, JSONRPCResponse, Notification, Request,
-    RequestId,
+    ClientCapabilities, Implementation, InitializeRequest, InitializeRequestParams, JSONRPCError,
+    JSONRPCNotification, JSONRPCNotificationParams, JSONRPCRequest, JSONRPCRequestParams,
+    JSONRPCRequestParamsMeta, JSONRPCResponse, MessageSchema, Notification, Request, RequestId,
+    Result as MCPResult, LATEST_PROTOCOL_VERSION,
 };
 
 use crate::transport::Transport;
 
 pub struct Protocol<E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static> {
-    notification_handlers: HashMap<String, Box<dyn Fn(JSONRPCNotification)>>,
-    request_handlers:
-        HashMap<String, Box<dyn Fn(JSONRPCRequest) -> Result<JSONRPCResponse, JSONRPCError>>>,
+    notification_handlers: HashMap<String, Box<dyn Fn(JSONRPCNotification) -> Result<(), E>>>,
+    request_handlers: HashMap<String, Box<dyn Fn(JSONRPCRequest) -> Result<MCPResult, E>>>,
     #[cfg(not(feature = "uuid"))]
     request_id: i64,
     transport: Box<dyn Transport<Error = E>>,
@@ -31,20 +31,20 @@ where
         }
     }
 
-    pub fn register_notification_handler(
+    pub fn set_notification_handler<S: MessageSchema>(
         &mut self,
-        method: String,
-        handler: Box<dyn Fn(JSONRPCNotification)>,
+        schema: S,
+        handler: Box<dyn Fn(JSONRPCNotification) -> Result<(), E>>,
     ) {
-        self.notification_handlers.insert(method, handler);
+        self.notification_handlers.insert(schema.method(), handler);
     }
 
-    pub fn register_request_handler(
+    pub fn set_request_handler<S: MessageSchema>(
         &mut self,
-        method: String,
-        handler: Box<dyn Fn(JSONRPCRequest) -> Result<JSONRPCResponse, JSONRPCError>>,
+        schema: S,
+        handler: Box<dyn Fn(JSONRPCRequest) -> Result<MCPResult, E>>,
     ) {
-        self.request_handlers.insert(method, handler);
+        self.request_handlers.insert(schema.method(), handler);
     }
 
     pub async fn send_request(&mut self, request: Request) -> Result<(), E> {

@@ -20,7 +20,7 @@ fn generate(version: &str) {
     let contents = syn::parse2::<syn::File>(type_space.to_stream()).unwrap();
     let contents = prettyplease::unparse(&contents);
 
-    let file_name = format!("src/v{}.rs", version.replace("-", "_"));
+    let file_name = format!("src/v{}/types.rs", version.replace("-", "_"));
     let mut out_file = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).to_path_buf();
     out_file.push(file_name);
 
