@@ -2,23 +2,20 @@
 
 use mcp_types::JSONRPCMessage;
 
-use crate::error::SSEClientTransportError;
+use crate::error::SSETransportError;
 
 #[async_trait::async_trait]
 pub(crate) trait MessageChannel: Send + Sync {
-    async fn send_message(
-        &mut self,
-        message: JSONRPCMessage,
-    ) -> Result<(), SSEClientTransportError>;
-    async fn receive_message(&mut self) -> Result<JSONRPCMessage, SSEClientTransportError>;
+    async fn send_message(&mut self, message: JSONRPCMessage) -> Result<(), SSETransportError>;
+    async fn receive_message(&mut self) -> Result<JSONRPCMessage, SSETransportError>;
 }
 
-pub(crate) struct ClientTokioMpscMessageChannel {
+pub(crate) struct TokioMpscMessageChannel {
     out_tx: tokio::sync::mpsc::Sender<JSONRPCMessage>,
     in_rx: tokio::sync::mpsc::Receiver<JSONRPCMessage>,
 }
 
-impl ClientTokioMpscMessageChannel {
+impl TokioMpscMessageChannel {
     pub(crate) fn new(
         in_rx: tokio::sync::mpsc::Receiver<JSONRPCMessage>,
         out_tx: tokio::sync::mpsc::Sender<JSONRPCMessage>,
@@ -28,19 +25,16 @@ impl ClientTokioMpscMessageChannel {
 }
 
 #[async_trait::async_trait]
-impl MessageChannel for ClientTokioMpscMessageChannel {
-    async fn send_message(
-        &mut self,
-        message: JSONRPCMessage,
-    ) -> Result<(), SSEClientTransportError> {
+impl MessageChannel for TokioMpscMessageChannel {
+    async fn send_message(&mut self, message: JSONRPCMessage) -> Result<(), SSETransportError> {
         self.out_tx.send(message).await?;
         Ok(())
     }
 
-    async fn receive_message(&mut self) -> Result<JSONRPCMessage, SSEClientTransportError> {
+    async fn receive_message(&mut self) -> Result<JSONRPCMessage, SSETransportError> {
         match self.in_rx.recv().await {
             Some(message) => Ok(message),
-            None => Err(SSEClientTransportError::ChannelClosed(
+            None => Err(SSETransportError::ChannelClosed(
                 "in channel closed unexpectedly".to_string(),
             )),
         }
@@ -56,12 +50,12 @@ mod tests {
     #[test]
     fn test_client_tokio_mpsc_channel_new() {
         let (out_tx, in_rx) = tokio::sync::mpsc::channel(1);
-        let channel = ClientTokioMpscMessageChannel::new(in_rx, out_tx);
+        let channel = TokioMpscMessageChannel::new(in_rx, out_tx);
         assert_eq!(channel.in_rx.capacity(), 1);
         assert_eq!(channel.out_tx.capacity(), 1);
 
         let (out_tx, in_rx) = tokio::sync::mpsc::channel(50);
-        let channel = ClientTokioMpscMessageChannel::new(in_rx, out_tx);
+        let channel = TokioMpscMessageChannel::new(in_rx, out_tx);
         assert_eq!(channel.in_rx.capacity(), 50);
         assert_eq!(channel.out_tx.capacity(), 50);
     }
@@ -69,7 +63,7 @@ mod tests {
     #[tokio::test]
     async fn test_client_tokio_mpsc_channel_send_message() {
         let (out_tx, in_rx) = tokio::sync::mpsc::channel(1);
-        let mut channel = ClientTokioMpscMessageChannel::new(in_rx, out_tx);
+        let mut channel = TokioMpscMessageChannel::new(in_rx, out_tx);
         let message = JSONRPCMessage::Notification(JSONRPCNotification {
             jsonrpc: "2.0".to_string(),
             method: "test".to_string(),

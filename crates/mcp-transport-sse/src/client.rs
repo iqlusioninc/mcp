@@ -1,3 +1,5 @@
+#![cfg(feature = "client")]
+
 use std::future::Future;
 use std::pin::Pin;
 
@@ -9,14 +11,14 @@ use reqwest_websocket::{Message, RequestBuilderExt};
 use tokio_util::sync::CancellationToken;
 use url::Url;
 
-use crate::channel::{ClientTokioMpscMessageChannel, MessageChannel};
-use crate::error::SSEClientTransportError;
-use crate::params::SSEClientParams;
+use crate::channel::{MessageChannel, TokioMpscMessageChannel};
+use crate::error::SSETransportError;
+use crate::params::SSEClientTransportParams;
 
-type TransportLoop = Pin<Box<dyn Future<Output = Result<(), SSEClientTransportError>> + Send>>;
+type TransportLoop = Pin<Box<dyn Future<Output = Result<(), SSETransportError>> + Send>>;
 
 pub struct SSEClientTransport {
-    params: SSEClientParams,
+    params: SSEClientTransportParams,
     started: bool,
     send_handle: Option<tokio::task::JoinHandle<TransportLoop>>,
     receive_handle: Option<tokio::task::JoinHandle<TransportLoop>>,
@@ -25,9 +27,9 @@ pub struct SSEClientTransport {
 }
 
 impl SSEClientTransport {
-    pub fn new(params: SSEClientParams) -> Result<Self, SSEClientTransportError> {
+    pub fn new(params: SSEClientTransportParams) -> Result<Self, SSETransportError> {
         if let Err(err) = params.validate() {
-            return Err(SSEClientTransportError::InvalidParams(err));
+            return Err(SSETransportError::InvalidParams(err));
         }
 
         Ok(Self {
@@ -43,16 +45,16 @@ impl SSEClientTransport {
 
 #[async_trait::async_trait]
 impl Transport for SSEClientTransport {
-    type Error = SSEClientTransportError;
+    type Error = SSETransportError;
 
     async fn start(&mut self) -> Result<(), Self::Error> {
         if self.started {
-            return Err(SSEClientTransportError::AlreadyStarted);
+            return Err(SSETransportError::AlreadyStarted);
         }
 
         let (out_tx, out_rx) = tokio::sync::mpsc::channel(100);
         let (in_tx, in_rx) = tokio::sync::mpsc::channel(100);
-        let channel = ClientTokioMpscMessageChannel::new(in_rx, out_tx);
+        let channel = TokioMpscMessageChannel::new(in_rx, out_tx);
         let cancel = CancellationToken::new();
 
         let http_url = self.params.http_url.clone();
@@ -77,7 +79,7 @@ impl Transport for SSEClientTransport {
 
     async fn close(&mut self) -> Result<(), Self::Error> {
         if !self.started {
-            return Err(SSEClientTransportError::NotStarted);
+            return Err(SSETransportError::NotStarted);
         }
 
         // Send cancel signal
@@ -92,7 +94,7 @@ impl Transport for SSEClientTransport {
         self.started = false;
 
         if let Err(err) = tokio::join!(send_handle, receive_handle).0 {
-            return Err(SSEClientTransportError::JoinError(err));
+            return Err(SSETransportError::JoinError(err));
         }
 
         self.channel = None;
@@ -102,7 +104,7 @@ impl Transport for SSEClientTransport {
 
     async fn send(&mut self, message: JSONRPCMessage) -> Result<(), Self::Error> {
         if !self.started {
-            return Err(SSEClientTransportError::NotStarted);
+            return Err(SSETransportError::NotStarted);
         }
 
         self.channel.as_mut().unwrap().send_message(message).await?;
@@ -115,7 +117,7 @@ impl Transport for SSEClientTransport {
 impl ReceiveTransport for SSEClientTransport {
     async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error> {
         if !self.started {
-            return Err(SSEClientTransportError::NotStarted);
+            return Err(SSETransportError::NotStarted);
         }
 
         self.channel.as_mut().unwrap().receive_message().await
@@ -142,7 +144,7 @@ async fn send_loop(
                     // Send the message to the server
                     let response = http_client.post(url.clone()).json(&message).send().await?;
                     if !response.status().is_success() {
-                        return Err(SSEClientTransportError::HttpError(
+                        return Err(SSETransportError::HttpError(
                             response.error_for_status().unwrap_err(),
                         ));
                     }
@@ -182,7 +184,7 @@ async fn receive_loop(
 async fn handle_receive_message(
     tx: tokio::sync::mpsc::Sender<JSONRPCMessage>,
     message: Result<Option<Message>, reqwest_websocket::Error>,
-) -> Result<(), SSEClientTransportError> {
+) -> Result<(), SSETransportError> {
     match message {
         Ok(Some(message)) => {
             // Send the message to the client
@@ -192,33 +194,33 @@ async fn handle_receive_message(
         }
         Ok(None) => {
             // The websocket connection is closed
-            return Err(SSEClientTransportError::ConnectionClosed(
+            return Err(SSETransportError::ConnectionClosed(
                 "websocket connection closed".to_string(),
             ));
         }
         Err(err) => {
-            return Err(SSEClientTransportError::WebsocketError(err));
+            return Err(SSETransportError::WebsocketError(err));
         }
     }
 }
 
-fn parse_message(message: Message) -> Result<JSONRPCMessage, SSEClientTransportError> {
+fn parse_message(message: Message) -> Result<JSONRPCMessage, SSETransportError> {
     match message {
         Message::Text(message) => {
-            serde_json::from_str(&message).map_err(SSEClientTransportError::SerdeJsonError)
+            serde_json::from_str(&message).map_err(SSETransportError::SerdeJsonError)
         }
         Message::Binary(message) => {
-            serde_json::from_slice(&message).map_err(SSEClientTransportError::SerdeJsonError)
+            serde_json::from_slice(&message).map_err(SSETransportError::SerdeJsonError)
         }
-        Message::Close { code, reason } => Err(SSEClientTransportError::ConnectionClosed(format!(
+        Message::Close { code, reason } => Err(SSETransportError::ConnectionClosed(format!(
             "websocket connection closed. close code: {}, reason: {}",
             code, reason
         ))),
         // TODO: Handle ping and pong messages
-        Message::Ping(_) => Err(SSEClientTransportError::InvalidData(
+        Message::Ping(_) => Err(SSETransportError::InvalidData(
             "invalid message type".to_string(),
         )),
-        Message::Pong(_) => Err(SSEClientTransportError::InvalidData(
+        Message::Pong(_) => Err(SSETransportError::InvalidData(
             "invalid message type".to_string(),
         )),
     }
@@ -316,8 +318,8 @@ mod tests {
     }
 
     #[test]
-    fn test_transport_constructor() {
-        let params = SSEClientParams {
+    fn test_client_transport_constructor() {
+        let params = SSEClientTransportParams {
             ws_url: "ws://localhost:8080".parse().unwrap(),
             http_url: "http://localhost:8080".parse().unwrap(),
         };
@@ -328,8 +330,8 @@ mod tests {
     }
 
     #[test]
-    fn test_transport_constructor_error() {
-        let params = SSEClientParams {
+    fn test_client_transport_constructor_error() {
+        let params = SSEClientTransportParams {
             ws_url: "invalid".parse().unwrap(),
             http_url: "invalid".parse().unwrap(),
         };
@@ -339,8 +341,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_transport_start_and_close() {
-        let params = SSEClientParams {
+    async fn test_client_transport_start_and_close() {
+        let params = SSEClientTransportParams {
             ws_url: "ws://localhost:8080".parse().unwrap(),
             http_url: "http://localhost:8080".parse().unwrap(),
         };
@@ -364,8 +366,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_transport_start_error_already_started() {
-        let params = SSEClientParams {
+    async fn test_client_transport_start_error_already_started() {
+        let params = SSEClientTransportParams {
             ws_url: "ws://localhost:8080".parse().unwrap(),
             http_url: "http://localhost:8080".parse().unwrap(),
         };
@@ -374,28 +376,28 @@ mod tests {
 
         transport.start().await.unwrap();
         assert!(match transport.start().await {
-            Err(SSEClientTransportError::AlreadyStarted) => true,
+            Err(SSETransportError::AlreadyStarted) => true,
             _ => false,
         });
     }
 
     #[tokio::test]
-    async fn test_transport_close_error_not_started() {
-        let params = SSEClientParams {
+    async fn test_client_transport_close_error_not_started() {
+        let params = SSEClientTransportParams {
             ws_url: "ws://localhost:8080".parse().unwrap(),
             http_url: "http://localhost:8080".parse().unwrap(),
         };
 
         let mut transport = SSEClientTransport::new(params).unwrap();
         assert!(match transport.close().await {
-            Err(SSEClientTransportError::NotStarted) => true,
+            Err(SSETransportError::NotStarted) => true,
             _ => false,
         });
     }
 
     #[tokio::test]
-    async fn test_transport_send_error_not_started() {
-        let params = SSEClientParams {
+    async fn test_client_transport_send_error_not_started() {
+        let params = SSEClientTransportParams {
             ws_url: "ws://localhost:8080".parse().unwrap(),
             http_url: "http://localhost:8080".parse().unwrap(),
         };
@@ -408,21 +410,21 @@ mod tests {
         });
 
         assert!(match transport.send(message).await {
-            Err(SSEClientTransportError::NotStarted) => true,
+            Err(SSETransportError::NotStarted) => true,
             _ => false,
         });
     }
 
     #[tokio::test]
-    async fn test_transport_receive_error_not_started() {
-        let params = SSEClientParams {
+    async fn test_client_transport_receive_error_not_started() {
+        let params = SSEClientTransportParams {
             ws_url: "ws://localhost:8080".parse().unwrap(),
             http_url: "http://localhost:8080".parse().unwrap(),
         };
 
         let mut transport = SSEClientTransport::new(params).unwrap();
         assert!(match transport.receive().await {
-            Err(SSEClientTransportError::NotStarted) => true,
+            Err(SSETransportError::NotStarted) => true,
             _ => false,
         });
     }
@@ -435,25 +437,22 @@ mod tests {
 
     #[async_trait::async_trait]
     impl MessageChannel for MockMessageChannel {
-        async fn send_message(
-            &mut self,
-            message: JSONRPCMessage,
-        ) -> Result<(), SSEClientTransportError> {
+        async fn send_message(&mut self, message: JSONRPCMessage) -> Result<(), SSETransportError> {
             self.sent_messages.lock().unwrap().push(message);
             Ok(())
         }
 
-        async fn receive_message(&mut self) -> Result<JSONRPCMessage, SSEClientTransportError> {
+        async fn receive_message(&mut self) -> Result<JSONRPCMessage, SSETransportError> {
             let mut messages = self.messages_to_receive.lock().unwrap();
-            messages.pop().ok_or(SSEClientTransportError::ChannelClosed(
+            messages.pop().ok_or(SSETransportError::ChannelClosed(
                 "no more messages".to_string(),
             ))
         }
     }
 
     #[tokio::test]
-    async fn test_transport_send_receive() {
-        let params = SSEClientParams {
+    async fn test_client_transport_send_receive() {
+        let params = SSEClientTransportParams {
             ws_url: "ws://localhost:8080".parse().unwrap(),
             http_url: "http://localhost:8080".parse().unwrap(),
         };

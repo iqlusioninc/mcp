@@ -1,7 +1,7 @@
 use mcp_types::JSONRPCMessage;
 
 #[derive(Debug, thiserror::Error)]
-pub enum SSEClientTransportError {
+pub enum SSETransportError {
     #[error("invalid parameters")]
     InvalidParams(String),
 
@@ -40,4 +40,7 @@ pub enum SSEClientTransportError {
 
     #[error("connection closed")]
     ConnectionClosed(String),
+
+    #[error("io error")]
+    IoError(#[from] std::io::Error),
 }
