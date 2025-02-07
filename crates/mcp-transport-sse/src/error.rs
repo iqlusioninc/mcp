@@ -1,4 +1,3 @@
-use mcp_core::transport::CallbackFnWithArg;
 use mcp_types::JSONRPCMessage;
 
 #[derive(Debug, thiserror::Error)]

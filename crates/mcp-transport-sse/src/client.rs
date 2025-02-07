@@ -287,16 +287,7 @@ mod tests {
         };
 
         let mut transport = SSEClientTransport::new(params).unwrap();
-
-        // Create mock channel
-        let sent_messages = Arc::new(Mutex::new(Vec::new()));
-        let messages_to_receive = Arc::new(Mutex::new(vec![JSONRPCMessage::Notification(
-            JSONRPCNotification {
-                jsonrpc: "2.0".to_string(),
-                method: "test".to_string(),
-                params: None,
-            },
-        )]));
+        let sent_messages = Arc::new(Mutex::new(Vec::<JSONRPCMessage>::new()));
 
         transport.started = true;
 

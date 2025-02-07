@@ -12,6 +12,7 @@ server = ["dep:axum", "dep:tower-http"]
 [dependencies]
 mcp-core = { path = "../mcp-core" }
 mcp-types = { path = "../mcp-types" }
+async-stream = "0.3.6"
 async-trait = { workspace = true }
 axum = { version = "0.8.1", optional = true }
 futures = "0.3.31"
