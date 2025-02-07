@@ -2,29 +2,37 @@
 //! messages between a client and server. Implementors of [`Transport`] are responsible for encoding and
 //! decoding messages, as well as transmitting/receiving them.
 
+use std::{future::Future, pin::Pin};
+
 use mcp_types::JSONRPCMessage;
+
+use crate::callback::Callback;
+
+pub type CallbackFn<E> = Box<
+    dyn FnMut() -> Pin<Box<dyn Future<Output = Result<(), E>> + Send + 'static>> + Send + 'static,
+>;
+pub type CallbackFnWithArg<T, E> = Box<
+    dyn FnMut(T) -> Pin<Box<dyn Future<Output = Result<(), E>> + Send + 'static>> + Send + 'static,
+>;
 
 /// Represents the Transport layer which handles communication
 #[async_trait::async_trait]
-pub trait Transport: Send + Sync {
+pub trait Transport: Callback<CallbackError = Self::Error> + Send {
     type Error: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static;
 
     /// Starts the transport, including any connection steps that might need to be taken.
     async fn start(&mut self) -> Result<(), Self::Error>;
 
-    /// Closes the connection
-    async fn close(&mut self) -> Result<(), Self::Error>;
-
     /// Sends a message
     async fn send(&mut self, message: JSONRPCMessage) -> Result<(), Self::Error>;
 
-    /// Receives a message
-    async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error>;
+    /// Closes the connection
+    async fn close(&mut self) -> Result<(), Self::Error>;
 }
 
 #[cfg(test)]
 pub mod test_utils {
-    use mcp_types::JSONRPCNotification;
+    use crate::impl_callback;
 
     use super::*;
     use std::sync::{Arc, Mutex};
@@ -33,6 +41,9 @@ pub mod test_utils {
     pub struct MockTransport {
         sent_messages: Arc<Mutex<Vec<JSONRPCMessage>>>,
         should_fail: Mutex<bool>,
+        on_close_callback: Option<CallbackFn<std::io::Error>>,
+        on_error_callback: Option<CallbackFnWithArg<std::io::Error, std::io::Error>>,
+        on_message_callback: Option<CallbackFnWithArg<JSONRPCMessage, std::io::Error>>,
     }
 
     impl MockTransport {
@@ -40,6 +51,9 @@ pub mod test_utils {
             Self {
                 sent_messages,
                 should_fail: Mutex::new(false),
+                on_close_callback: None,
+                on_error_callback: None,
+                on_message_callback: None,
             }
         }
 
@@ -67,6 +81,9 @@ pub mod test_utils {
             if *self.should_fail.lock().unwrap() {
                 return Err(std::io::Error::new(std::io::ErrorKind::Other, "Mock error"));
             }
+
+            self.on_close().await?;
+
             Ok(())
         }
 
@@ -77,17 +94,7 @@ pub mod test_utils {
             self.sent_messages.lock().unwrap().push(message);
             Ok(())
         }
-
-        async fn receive(&mut self) -> Result<JSONRPCMessage, Self::Error> {
-            if *self.should_fail.lock().unwrap() {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Mock error"));
-            }
-
-            Ok(JSONRPCMessage::Notification(JSONRPCNotification {
-                jsonrpc: "2.0".to_string(),
-                method: "test".to_string(),
-                params: None,
-            }))
-        }
     }
+
+    impl_callback!(MockTransport, std::io::Error);
 }

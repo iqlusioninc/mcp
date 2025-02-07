@@ -1,40 +1,54 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, future::Future};
 
 use mcp_types::{
-    ClientCapabilities, Implementation, InitializeRequest, InitializeRequestParams, JSONRPCError,
-    JSONRPCNotification, JSONRPCNotificationParams, JSONRPCRequest, JSONRPCRequestParams,
-    JSONRPCRequestParamsMeta, JSONRPCResponse, MessageSchema, Notification, Request, RequestId,
-    Result as MCPResult, LATEST_PROTOCOL_VERSION,
+    JSONRPCMessage, JSONRPCNotification, JSONRPCNotificationParams, JSONRPCRequest,
+    JSONRPCRequestParams, JSONRPCRequestParamsMeta, MessageSchema, Notification, Request,
+    RequestId, Result as MCPResult,
 };
 
-use crate::transport::Transport;
+use crate::{
+    callback::Callback,
+    transport::{CallbackFn, CallbackFnWithArg, Transport},
+};
 
-pub struct Protocol<E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static> {
-    notification_handlers: HashMap<String, Box<dyn Fn(JSONRPCNotification) -> Result<(), E>>>,
-    request_handlers: HashMap<String, Box<dyn Fn(JSONRPCRequest) -> Result<MCPResult, E>>>,
-    #[cfg(not(feature = "uuid"))]
-    request_id: i64,
-    transport: Box<dyn Transport<Error = E>>,
-}
-
-impl<E> Protocol<E>
+pub struct Protocol<T, E>
 where
+    T: Transport<Error = E>,
     E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
 {
-    pub fn new(transport: Box<dyn Transport<Error = E>>) -> Self {
+    on_close_callback: Option<CallbackFn<E>>,
+    on_error_callback: Option<CallbackFnWithArg<E, E>>,
+    on_message_callback: Option<CallbackFnWithArg<JSONRPCMessage, E>>,
+    notification_handlers:
+        HashMap<String, Box<dyn Fn(JSONRPCNotification) -> Result<(), E> + Send>>,
+    request_handlers: HashMap<String, Box<dyn Fn(JSONRPCRequest) -> Result<MCPResult, E> + Send>>,
+    #[cfg(not(feature = "uuid"))]
+    request_id: i64,
+    transport: Box<T>,
+}
+
+impl<T, E> Protocol<T, E>
+where
+    T: Transport<Error = E>,
+    E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
+{
+    pub fn new(transport: T) -> Self {
         Self {
+            on_close_callback: None,
+            on_error_callback: None,
+            on_message_callback: None,
             notification_handlers: HashMap::new(),
             request_handlers: HashMap::new(),
             #[cfg(not(feature = "uuid"))]
             request_id: 0,
-            transport,
+            transport: Box::new(transport),
         }
     }
 
     pub fn set_notification_handler<S: MessageSchema>(
         &mut self,
         schema: S,
-        handler: Box<dyn Fn(JSONRPCNotification) -> Result<(), E>>,
+        handler: Box<dyn Fn(JSONRPCNotification) -> Result<(), E> + Send>,
     ) {
         self.notification_handlers.insert(schema.method(), handler);
     }
@@ -42,7 +56,7 @@ where
     pub fn set_request_handler<S: MessageSchema>(
         &mut self,
         schema: S,
-        handler: Box<dyn Fn(JSONRPCRequest) -> Result<MCPResult, E>>,
+        handler: Box<dyn Fn(JSONRPCRequest) -> Result<MCPResult, E> + Send>,
     ) {
         self.request_handlers.insert(schema.method(), handler);
     }
@@ -95,6 +109,66 @@ where
     }
 }
 
+#[async_trait::async_trait]
+impl<T, E> Callback for Protocol<T, E>
+where
+    T: Transport<Error = E>,
+    E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
+{
+    type CallbackError = E;
+
+    async fn on_close(&mut self) -> Result<(), Self::CallbackError> {
+        if let Some(callback) = self.on_close_callback.as_mut() {
+            callback().await
+        } else {
+            Ok(())
+        }
+    }
+
+    async fn on_error(&mut self, error: Self::CallbackError) -> Result<(), Self::CallbackError> {
+        if let Some(callback) = self.on_error_callback.as_mut() {
+            callback(error).await
+        } else {
+            Ok(())
+        }
+    }
+
+    async fn on_message(
+        &mut self,
+        message: mcp_types::JSONRPCMessage,
+    ) -> Result<(), Self::CallbackError> {
+        if let Some(callback) = self.on_message_callback.as_mut() {
+            callback(message).await
+        } else {
+            Ok(())
+        }
+    }
+
+    async fn set_on_close_callback<F, Fut>(&mut self, mut callback: F)
+    where
+        F: FnMut() -> Fut + Send + 'static,
+        Fut: Future<Output = Result<(), Self::CallbackError>> + Send + 'static,
+    {
+        self.on_close_callback = Some(Box::new(move || Box::pin(callback())));
+    }
+
+    async fn set_on_error_callback<F, Fut>(&mut self, mut callback: F)
+    where
+        F: FnMut(Self::CallbackError) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<(), Self::CallbackError>> + Send + 'static,
+    {
+        self.on_error_callback = Some(Box::new(move |error| Box::pin(callback(error))));
+    }
+
+    async fn set_on_message_callback<F, Fut>(&mut self, mut callback: F)
+    where
+        F: FnMut(mcp_types::JSONRPCMessage) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<(), Self::CallbackError>> + Send + 'static,
+    {
+        self.on_message_callback = Some(Box::new(move |message| Box::pin(callback(message))));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, Mutex};
@@ -108,7 +182,7 @@ mod tests {
     async fn test_connect() {
         let sent_messages = Arc::new(Mutex::new(Vec::new()));
         let transport = MockTransport::new(sent_messages.clone());
-        let mut protocol = Protocol::new(Box::new(transport));
+        let mut protocol = Protocol::new(transport);
 
         assert!(protocol.connect().await.is_ok());
     }
@@ -118,7 +192,7 @@ mod tests {
         let sent_messages = Arc::new(Mutex::new(Vec::new()));
         let transport = MockTransport::new(sent_messages.clone());
         transport.set_should_fail(true);
-        let mut protocol = Protocol::new(Box::new(transport));
+        let mut protocol = Protocol::new(transport);
 
         assert!(protocol.connect().await.is_err());
     }
@@ -127,7 +201,7 @@ mod tests {
     async fn test_send_notification() {
         let sent_messages = Arc::new(Mutex::new(Vec::new()));
         let transport = MockTransport::new(sent_messages.clone());
-        let mut protocol = Protocol::new(Box::new(transport));
+        let mut protocol = Protocol::new(transport);
 
         let notification = Notification {
             method: "test_method".to_string(),
@@ -154,7 +228,7 @@ mod tests {
     async fn test_send_request() {
         let sent_messages = Arc::new(Mutex::new(Vec::new()));
         let transport = MockTransport::new(sent_messages.clone());
-        let mut protocol = Protocol::new(Box::new(transport));
+        let mut protocol = Protocol::new(transport);
 
         let request = Request {
             method: "test_method".to_string(),
@@ -196,7 +270,7 @@ mod tests {
     async fn test_request_id_increment() {
         let sent_messages = Arc::new(Mutex::new(Vec::new()));
         let transport = MockTransport::new(sent_messages.clone());
-        let mut protocol = Protocol::new(Box::new(transport));
+        let mut protocol = Protocol::new(transport);
 
         assert!(match (protocol.get_request_id(), RequestId::Integer(1)) {
             (RequestId::Integer(a), RequestId::Integer(b)) => a == b,
