@@ -3,35 +3,35 @@ use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SSEClientTransportParams {
-    pub ws_url: String,
-    pub http_url: String,
+    pub event_url: String,
+    pub post_url: String,
 }
 
 impl Default for SSEClientTransportParams {
     fn default() -> Self {
         Self {
-            ws_url: "ws://localhost:8080".to_string(),
-            http_url: "http://localhost:8080".to_string(),
+            event_url: "http://localhost:8080".to_string(),
+            post_url: "http://localhost:8080".to_string(),
         }
     }
 }
 
 impl SSEClientTransportParams {
     pub fn validate(&self) -> Result<(), String> {
-        if self.ws_url.is_empty() {
-            return Err("ws_url is required".to_string());
+        if self.event_url.is_empty() {
+            return Err("event_url is required".to_string());
         }
 
-        if !Self::is_valid_url(&self.ws_url) {
-            return Err(format!("ws_url is not a valid URL: {}", self.ws_url));
+        if !Self::is_valid_url(&self.event_url) {
+            return Err(format!("event_url is not a valid URL: {}", self.event_url));
         }
 
-        if self.http_url.is_empty() {
-            return Err("http_url is required".to_string());
+        if self.post_url.is_empty() {
+            return Err("post_url is required".to_string());
         }
 
-        if !Self::is_valid_url(&self.http_url) {
-            return Err(format!("http_url is not a valid URL: {}", self.http_url));
+        if !Self::is_valid_url(&self.post_url) {
+            return Err(format!("post_url is not a valid URL: {}", self.post_url));
         }
 
         Ok(())

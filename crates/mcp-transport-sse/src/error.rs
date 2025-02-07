@@ -1,3 +1,4 @@
+use mcp_core::transport::CallbackFnWithArg;
 use mcp_types::JSONRPCMessage;
 
 #[derive(Debug, thiserror::Error)]
@@ -29,8 +30,8 @@ pub enum SSETransportError {
     #[error("http error")]
     HttpError(#[from] reqwest::Error),
 
-    #[error("websocket error")]
-    WebsocketError(#[from] reqwest_websocket::Error),
+    #[error("event source error")]
+    EventSourceError(#[from] reqwest_eventsource::Error),
 
     #[error("serde json error")]
     SerdeJsonError(#[from] serde_json::Error),
@@ -43,4 +44,7 @@ pub enum SSETransportError {
 
     #[error("io error")]
     IoError(#[from] std::io::Error),
+
+    #[error("invalid state")]
+    InvalidState(String),
 }
