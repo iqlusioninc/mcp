@@ -42,10 +42,7 @@ impl SSEClientTransportParams {
     pub fn is_valid_url(url: &str) -> bool {
         match Url::parse(url) {
             Ok(parsed_url) => {
-                let valid_scheme = parsed_url.scheme() == "http"
-                    || parsed_url.scheme() == "https"
-                    || parsed_url.scheme() == "ws"
-                    || parsed_url.scheme() == "wss";
+                let valid_scheme = parsed_url.scheme() == "http" || parsed_url.scheme() == "https";
                 let valid_host = parsed_url.host_str().is_some();
 
                 valid_scheme && valid_host
@@ -65,7 +62,7 @@ impl Default for SSEServerTransportParams {
     fn default() -> Self {
         Self {
             listen_addr: "127.0.0.1:8080".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            events_addr: "http://localhost:8080".to_string(),
         }
     }
 }
@@ -120,58 +117,64 @@ mod tests {
     }
 
     #[test]
-    fn test_server_transport_params_validation() {
+    fn test_server_sse_transport_params_validation() {
         let params = SSEServerTransportParams {
             listen_addr: "127.0.0.1:8080".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            events_addr: "http://localhost:8080".to_string(),
         };
         assert!(params.validate().is_ok());
 
         let params = SSEServerTransportParams {
             listen_addr: "".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            events_addr: "http://localhost:8080".to_string(),
         };
         assert!(params.validate().is_err());
 
         let params = SSEServerTransportParams {
-            listen_addr: "invalid".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            listen_addr: "127.0.0.1:8080".to_string(),
+            events_addr: "".to_string(),
+        };
+        assert!(params.validate().is_err());
+
+        let params = SSEServerTransportParams {
+            listen_addr: "127.0.0.1:8080".to_string(),
+            events_addr: "invalid".to_string(),
         };
         assert!(params.validate().is_err());
     }
 
     #[test]
-    fn test_server_transport_params_port_validation() {
+    fn test_server_sse_transport_params_port_validation() {
         // Test valid ports
         let params = SSEServerTransportParams {
             listen_addr: "127.0.0.1:8080".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            events_addr: "http://localhost:8080".to_string(),
         };
         assert!(params.validate().is_ok());
 
         let params = SSEServerTransportParams {
             listen_addr: "127.0.0.1:1".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            events_addr: "http://localhost:8080".to_string(),
         };
         assert!(params.validate().is_ok());
 
         let params = SSEServerTransportParams {
             listen_addr: "127.0.0.1:65535".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            events_addr: "http://localhost:8080".to_string(),
         };
         assert!(params.validate().is_ok());
 
         // Test port 0 (valid for testing - system assigns random port)
         let params = SSEServerTransportParams {
             listen_addr: "127.0.0.1:0".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            events_addr: "http://localhost:8080".to_string(),
         };
         assert!(params.validate().is_ok());
 
         // Test invalid ports
         let params = SSEServerTransportParams {
             listen_addr: "127.0.0.1:65536".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            events_addr: "http://localhost:8080".to_string(),
         };
         assert!(params.validate().is_err());
         assert_eq!(
@@ -181,7 +184,7 @@ mod tests {
 
         let params = SSEServerTransportParams {
             listen_addr: "127.0.0.1:99999".to_string(),
-            events_addr: "ws://localhost:8080".to_string(),
+            events_addr: "http://localhost:8080".to_string(),
         };
         assert!(params.validate().is_err());
         assert_eq!(
@@ -191,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn test_server_transport_params_ws_url_validation() {
+    fn test_server_sse_transport_params_ws_url_validation() {
         // Test valid http urls
         let params = SSEServerTransportParams {
             listen_addr: "127.0.0.1:8080".to_string(),

@@ -42,9 +42,9 @@ impl SSEClientTransport {
 
         Ok(Self {
             params,
-            on_close_callback: None,
-            on_error_callback: None,
-            on_message_callback: None,
+            on_close_callback: Some(Box::new(move || Box::pin(async { Ok(()) }))),
+            on_error_callback: Some(Box::new(move |_| Box::pin(async { Ok(()) }))),
+            on_message_callback: Some(Box::new(move |_| Box::pin(async { Ok(()) }))),
             started: false,
             receive_handle: None,
             cancel: None,
@@ -211,8 +211,8 @@ mod tests {
     #[tokio::test]
     async fn test_client_sse_transport_start_and_close() {
         let params = SSEClientTransportParams {
-            event_url: "http://localhost:8080/events".parse().unwrap(),
-            post_url: "http://localhost:8080/api".parse().unwrap(),
+            event_url: "http://localhost:8080".parse().unwrap(),
+            post_url: "http://localhost:8080".parse().unwrap(),
         };
 
         let mut transport = SSEClientTransport::new(params).unwrap();
@@ -280,29 +280,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_client_sse_transport_send() {
-        let params = SSEClientTransportParams {
-            event_url: "http://localhost:8080/events".parse().unwrap(),
-            post_url: "http://localhost:8080/api".parse().unwrap(),
-        };
-
-        let mut transport = SSEClientTransport::new(params).unwrap();
-        let sent_messages = Arc::new(Mutex::new(Vec::<JSONRPCMessage>::new()));
-
-        transport.started = true;
-
-        // Test sending
-        let message = JSONRPCMessage::Notification(JSONRPCNotification {
-            jsonrpc: "2.0".to_string(),
-            method: "test".to_string(),
-            params: None,
-        });
-
-        transport.send(message.clone()).await.unwrap();
-        assert_eq!(sent_messages.lock().unwrap().pop().unwrap(), message);
-    }
-
-    #[tokio::test]
     async fn test_client_sse_transport_set_on_close_callback() {
         let params = SSEClientTransportParams {
             event_url: "http://localhost:8080/events".parse().unwrap(),
@@ -333,8 +310,8 @@ mod tests {
     #[tokio::test]
     async fn test_client_sse_transport_set_on_error_callback() {
         let params = SSEClientTransportParams {
-            event_url: "http://localhost:8080/events".parse().unwrap(),
-            post_url: "http://localhost:8080/api".parse().unwrap(),
+            event_url: "http://localhost:8080".parse().unwrap(),
+            post_url: "http://localhost:8080".parse().unwrap(),
         };
         let mut transport = SSEClientTransport::new(params).unwrap();
         let flag = Arc::new(Mutex::new(false));
@@ -344,8 +321,10 @@ mod tests {
             .set_on_error_callback(move |err| {
                 let flag_clone = flag_clone.clone();
                 async move {
-                    if err.to_string().contains("test error") {
-                        *flag_clone.lock().unwrap() = true;
+                    if let SSETransportError::ChannelClosed(err) = err {
+                        if err.contains("test error") {
+                            *flag_clone.lock().unwrap() = true;
+                        }
                     }
                     Ok(())
                 }

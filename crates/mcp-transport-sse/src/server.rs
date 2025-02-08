@@ -339,7 +339,7 @@ mod tests {
     #[tokio::test]
     async fn test_server_sse_transport_set_on_error_callback() {
         let params = SSEServerTransportParams {
-            listen_addr: "127.0.0.1:0".to_string(),
+            listen_addr: "127.0.0.1:8080".to_string(),
             events_addr: "http://localhost:8080".to_string(),
         };
         let mut transport = SSEServerTransport::new(params).unwrap();
@@ -350,8 +350,10 @@ mod tests {
             .set_on_error_callback(move |err| {
                 let flag_clone = flag_clone.clone();
                 async move {
-                    if err.to_string().contains("test error") {
-                        *flag_clone.lock().unwrap() = true;
+                    if let SSETransportError::ChannelClosed(err) = err {
+                        if err.contains("test error") {
+                            *flag_clone.lock().unwrap() = true;
+                        }
                     }
                     Ok(())
                 }
@@ -408,7 +410,7 @@ mod tests {
     #[tokio::test]
     async fn test_server_sse_transport_http_handlers() {
         let params = SSEServerTransportParams {
-            listen_addr: "127.0.0.1:0".to_string(),
+            listen_addr: "127.0.0.1:8080".to_string(),
             events_addr: "http://localhost:8080".to_string(),
         };
 
@@ -416,7 +418,7 @@ mod tests {
         transport.start().await.unwrap();
 
         // Create app state for testing handlers directly
-        let (tx, _) = tokio::sync::broadcast::channel(100);
+        let (tx, _rx) = tokio::sync::broadcast::channel(100);
         let state = Arc::new(AppState { broadcast_tx: tx });
 
         // Test message handler
