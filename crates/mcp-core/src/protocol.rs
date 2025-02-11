@@ -1,67 +1,145 @@
-use std::{collections::HashMap, future::Future};
+use std::{any::TypeId, collections::HashMap, future::Future, pin::Pin, sync::Arc};
 
 use mcp_types::{
-    JSONRPCMessage, JSONRPCNotification, JSONRPCNotificationParams, JSONRPCRequest,
-    JSONRPCRequestParams, JSONRPCRequestParamsMeta, MessageSchema, Notification, Request,
+    v2024_11_05::{error::ErrorCode, request_id::GetRequestId},
+    CancelledNotification, JSONRPCError, JSONRPCMessage, JSONRPCNotification,
+    JSONRPCNotificationParams, JSONRPCRequest, JSONRPCRequestParams, JSONRPCRequestParamsMeta,
+    JSONRPCResponse, MCPError, Notification, ProgressNotification, ProgressToken, Request,
     RequestId, Result as MCPResult,
 };
+use tokio::sync::Mutex;
+use tracing::warn;
 
-use crate::{
-    callback::Callback,
-    transport::{CallbackFn, CallbackFnWithArg, Transport},
-};
+use crate::{error::Error, transport::Transport};
 
-pub struct Protocol<T, E>
-where
-    T: Transport<Error = E>,
-    E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
-{
-    on_close_callback: Option<CallbackFn<E>>,
-    on_error_callback: Option<CallbackFnWithArg<E, E>>,
-    on_message_callback: Option<CallbackFnWithArg<JSONRPCMessage, E>>,
-    notification_handlers:
-        HashMap<String, Box<dyn Fn(JSONRPCNotification) -> Result<(), E> + Send>>,
-    request_handlers: HashMap<String, Box<dyn Fn(JSONRPCRequest) -> Result<MCPResult, E> + Send>>,
-    #[cfg(not(feature = "uuid"))]
-    request_id: i64,
-    transport: Box<T>,
+type NotificationHandlerResult =
+    Pin<Box<dyn Future<Output = Result<(), Error>> + Send + Sync + 'static>>;
+type NotificationHandlers =
+    HashMap<TypeId, Box<dyn Fn(JSONRPCNotification) -> NotificationHandlerResult + Send + Sync>>;
+type RequestHandlerResult = Pin<Box<dyn Future<Output = MCPResult> + Send + Sync + 'static>>;
+type RequestHandlers =
+    HashMap<TypeId, Box<dyn Fn(JSONRPCRequest) -> RequestHandlerResult + Send + Sync>>;
+type ResponseHandlerResult =
+    Pin<Box<dyn Future<Output = Result<(), Error>> + Send + Sync + 'static>>;
+type ResponseHandlers =
+    HashMap<RequestId, Box<dyn Fn(MCPResult) -> ResponseHandlerResult + Send + Sync>>;
+type ProgressHandlerResult = Pin<
+    Box<
+        dyn FnMut(ProgressToken) -> Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>
+            + Send
+            + Sync
+            + 'static,
+    >,
+>;
+type ProgressHandlers =
+    HashMap<RequestId, Box<dyn Fn(ProgressNotification) -> ProgressHandlerResult + Send + Sync>>;
+
+pub trait NotificationHandler<N>: Send + Sync + 'static {
+    type Future: Future<Output = Result<(), Error>> + Send + Sync + 'static;
+    fn handle(&self, notification: N) -> Self::Future;
 }
 
-impl<T, E> Protocol<T, E>
+impl<N, F, Fut> NotificationHandler<N> for F
 where
-    T: Transport<Error = E>,
-    E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
+    N: 'static,
+    F: Fn(N) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = Result<(), Error>> + Send + Sync + 'static,
 {
-    pub fn new(transport: T) -> Self {
-        Self {
-            on_close_callback: None,
-            on_error_callback: None,
-            on_message_callback: None,
+    type Future = Fut;
+    fn handle(&self, notification: N) -> Self::Future {
+        self(notification)
+    }
+}
+
+pub struct Protocol<T, TErr>
+where
+    T: Transport<Error = TErr>,
+    TErr: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
+{
+    notification_handlers: NotificationHandlers,
+    progress_handlers: ProgressHandlers,
+    request_handlers: RequestHandlers,
+    response_handlers: ResponseHandlers,
+    #[cfg(not(feature = "uuid"))]
+    request_id: i64,
+    transport: Option<Box<T>>,
+}
+
+impl<T, TE> Protocol<T, TE>
+where
+    T: Transport<Error = TE>,
+    TE: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
+{
+    pub fn new() -> Self {
+        let mut protocol = Self {
             notification_handlers: HashMap::new(),
+            progress_handlers: HashMap::new(),
             request_handlers: HashMap::new(),
+            response_handlers: HashMap::new(),
             #[cfg(not(feature = "uuid"))]
             request_id: 0,
-            transport: Box::new(transport),
-        }
+            transport: None,
+        };
+
+        protocol.set_notification_handler::<CancelledNotification>(|_notification| async {
+            todo!("implement abort system")
+        });
+
+        protocol.set_notification_handler::<ProgressNotification>(|_notification| async {
+            todo!("implement progress system")
+        });
+
+        protocol
     }
 
-    pub fn set_notification_handler<S: MessageSchema>(
+    /// Set a handler for a specific notification type
+    pub fn set_notification_handler<N>(&mut self, handler: impl NotificationHandler<N>)
+    where
+        N: 'static,
+    {
+        let key = TypeId::of::<N>();
+        let handler = Box::new(
+            move |notification: JSONRPCNotification| -> NotificationHandlerResult {
+                let value = serde_json::to_value(&notification).unwrap();
+                let notification = match mcp_types::v2024_11_05::convert::infer_notification(&value)
+                {
+                    Some(boxed) => match mcp_types::v2024_11_05::convert::downcast::<N>(boxed) {
+                        Some(n) => n,
+                        None => {
+                            return Box::pin(async move {
+                                Err(Error::NotificationConversion(MCPError {
+                                    code: ErrorCode::InternalError as i64,
+                                    message: "Failed to read notification".into(),
+                                    data: None,
+                                }))
+                            })
+                        }
+                    },
+                    None => {
+                        return Box::pin(async move {
+                            Err(Error::NotificationConversion(MCPError {
+                                code: -32000,
+                                message: "Invalid notification type".into(),
+                                data: None,
+                            }))
+                        })
+                    }
+                };
+                Box::pin(handler.handle(notification))
+            },
+        );
+        self.notification_handlers.insert(key, handler);
+    }
+
+    pub fn set_request_handler<M: 'static>(
         &mut self,
-        schema: S,
-        handler: Box<dyn Fn(JSONRPCNotification) -> Result<(), E> + Send>,
+        handler: Box<dyn Fn(JSONRPCRequest) -> RequestHandlerResult + Send + Sync>,
     ) {
-        self.notification_handlers.insert(schema.method(), handler);
+        let key = TypeId::of::<M>();
+        self.request_handlers.insert(key, handler);
     }
 
-    pub fn set_request_handler<S: MessageSchema>(
-        &mut self,
-        schema: S,
-        handler: Box<dyn Fn(JSONRPCRequest) -> Result<MCPResult, E> + Send>,
-    ) {
-        self.request_handlers.insert(schema.method(), handler);
-    }
-
-    pub async fn send_request(&mut self, request: Request) -> Result<(), E> {
+    pub async fn send_request(&mut self, request: Request) -> Result<MCPResult, Error> {
         let id = self.get_request_id();
         let request = JSONRPCRequest {
             id,
@@ -74,10 +152,14 @@ where
             }),
         };
 
-        self.transport.send(request.into()).await
+        if let Err(_) = self.transport.as_mut().unwrap().send(request.into()).await {
+            todo!()
+        }
+
+        Ok(MCPResult::default())
     }
 
-    pub async fn send_notification(&mut self, notification: Notification) -> Result<(), E> {
+    pub async fn send_notification(&mut self, notification: Notification) -> Result<(), Error> {
         let notification = JSONRPCNotification {
             jsonrpc: "2.0".to_string(),
             method: notification.method,
@@ -85,12 +167,17 @@ where
                 .params
                 .map(|params| JSONRPCNotificationParams { meta: params.meta }),
         };
-
-        self.transport.send(notification.into()).await
+        todo!();
+        //self.transport.as_mut().unwrap().send(notification.into()).await
     }
 
-    pub async fn connect(&mut self) -> Result<(), E> {
-        self.transport.start().await
+    pub async fn connect(&mut self, transport: T) -> Result<(), Error> {
+        self.transport = Some(Box::new(transport));
+
+        todo!();
+        //self.transport.as_mut().unwrap().start().await?;
+
+        Ok(())
     }
 
     fn get_request_id(&mut self) -> RequestId {
@@ -109,180 +196,97 @@ where
     }
 }
 
-#[async_trait::async_trait]
-impl<T, E> Callback for Protocol<T, E>
-where
-    T: Transport<Error = E>,
-    E: Into<Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
-{
-    type CallbackError = E;
-
-    async fn on_close(&mut self) -> Result<(), Self::CallbackError> {
-        if let Some(callback) = self.on_close_callback.as_mut() {
-            callback().await
-        } else {
-            Ok(())
-        }
-    }
-
-    async fn on_error(&mut self, error: Self::CallbackError) -> Result<(), Self::CallbackError> {
-        if let Some(callback) = self.on_error_callback.as_mut() {
-            callback(error).await
-        } else {
-            Ok(())
-        }
-    }
-
-    async fn on_message(
-        &mut self,
-        message: mcp_types::JSONRPCMessage,
-    ) -> Result<(), Self::CallbackError> {
-        if let Some(callback) = self.on_message_callback.as_mut() {
-            callback(message).await
-        } else {
-            Ok(())
-        }
-    }
-
-    async fn set_on_close_callback<F, Fut>(&mut self, mut callback: F)
-    where
-        F: FnMut() -> Fut + Send + 'static,
-        Fut: Future<Output = Result<(), Self::CallbackError>> + Send + 'static,
-    {
-        self.on_close_callback = Some(Box::new(move || Box::pin(callback())));
-    }
-
-    async fn set_on_error_callback<F, Fut>(&mut self, mut callback: F)
-    where
-        F: FnMut(Self::CallbackError) -> Fut + Send + 'static,
-        Fut: Future<Output = Result<(), Self::CallbackError>> + Send + 'static,
-    {
-        self.on_error_callback = Some(Box::new(move |error| Box::pin(callback(error))));
-    }
-
-    async fn set_on_message_callback<F, Fut>(&mut self, mut callback: F)
-    where
-        F: FnMut(mcp_types::JSONRPCMessage) -> Fut + Send + 'static,
-        Fut: Future<Output = Result<(), Self::CallbackError>> + Send + 'static,
-    {
-        self.on_message_callback = Some(Box::new(move |message| Box::pin(callback(message))));
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
+    use serde::{Deserialize, Serialize};
 
     use super::*;
-    use mcp_types::{JSONRPCMessage, NotificationParams, RequestParams, RequestParamsMeta};
 
-    use crate::transport::test_utils::MockTransport;
-
-    #[tokio::test]
-    async fn test_connect() {
-        let sent_messages = Arc::new(Mutex::new(Vec::new()));
-        let transport = MockTransport::new(sent_messages.clone());
-        let mut protocol = Protocol::new(transport);
-
-        assert!(protocol.connect().await.is_ok());
+    struct TestTransport {
+        messages: Vec<JSONRPCMessage>,
+        called_start: bool,
+        called_close: bool,
     }
-
-    #[tokio::test]
-    async fn test_connect_failure() {
-        let sent_messages = Arc::new(Mutex::new(Vec::new()));
-        let transport = MockTransport::new(sent_messages.clone());
-        transport.set_should_fail(true);
-        let mut protocol = Protocol::new(transport);
-
-        assert!(protocol.connect().await.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_send_notification() {
-        let sent_messages = Arc::new(Mutex::new(Vec::new()));
-        let transport = MockTransport::new(sent_messages.clone());
-        let mut protocol = Protocol::new(transport);
-
-        let notification = Notification {
-            method: "test_method".to_string(),
-            params: Some(NotificationParams {
-                meta: serde_json::Map::new(),
-            }),
-        };
-
-        assert!(protocol.send_notification(notification).await.is_ok());
-
-        let messages = sent_messages.lock().unwrap();
-        assert_eq!(messages.len(), 1);
-        match &messages[0] {
-            JSONRPCMessage::Notification(n) => {
-                assert_eq!(n.jsonrpc, "2.0");
-                assert_eq!(n.method, "test_method");
-                assert!(n.params.is_some());
+    impl TestTransport {
+        fn new() -> Self {
+            Self {
+                messages: Vec::new(),
+                called_start: false,
+                called_close: false,
             }
-            _ => panic!("Expected notification message"),
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl Transport for TestTransport {
+        type Error = String;
+
+        async fn send(&mut self, message: JSONRPCMessage) -> Result<(), Self::Error> {
+            self.messages.push(message);
+            Ok(())
+        }
+
+        async fn start(&mut self) -> Result<(), Self::Error> {
+            Ok(())
+        }
+
+        async fn close(&mut self) -> Result<(), Self::Error> {
+            Ok(())
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+    struct TestNotification {
+        method: String,
+        params: Option<TestNotificationParams>,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+    struct TestNotificationParams {
+        test: String,
+    }
+
+    struct ProtocolFixture {
+        protocol: Protocol<TestTransport, String>,
+        called_notification_callback: bool,
+    }
+
+    impl ProtocolFixture {
+        fn new(protocol: Protocol<TestTransport, String>) -> Self {
+            Self {
+                protocol,
+                called_notification_callback: false,
+            }
+        }
+
+        async fn set_notification_handler<N: 'static>(
+            &mut self,
+            handler: impl NotificationHandler<N>,
+        ) {
+            self.protocol.set_notification_handler(handler);
+        }
+
+        async fn connect(&mut self, transport: TestTransport) {
+            self.protocol.connect(transport).await.unwrap();
         }
     }
 
     #[tokio::test]
-    async fn test_send_request() {
-        let sent_messages = Arc::new(Mutex::new(Vec::new()));
-        let transport = MockTransport::new(sent_messages.clone());
-        let mut protocol = Protocol::new(transport);
-
-        let request = Request {
-            method: "test_method".to_string(),
-            params: Some(RequestParams {
-                meta: Some(RequestParamsMeta {
-                    progress_token: Some(mcp_types::ProgressToken::Integer(1)),
-                }),
+    async fn test_protocol() {
+        let mut protocol = Protocol::new();
+        let mut fixture = ProtocolFixture::new(protocol);
+        let notification = TestNotification {
+            method: "test".to_string(),
+            params: Some(TestNotificationParams {
+                test: "test".to_string(),
             }),
         };
-
-        assert!(protocol.send_request(request).await.is_ok());
-
-        let messages = sent_messages.lock().unwrap();
-        assert_eq!(messages.len(), 1);
-        match &messages[0] {
-            JSONRPCMessage::Request(r) => {
-                assert_eq!(r.jsonrpc, "2.0");
-                assert_eq!(r.method, "test_method");
-                assert!(r.params.is_some());
-                #[cfg(not(feature = "uuid"))]
-                assert!(match (r.id.clone(), RequestId::Integer(1)) {
-                    (RequestId::Integer(a), RequestId::Integer(b)) => a == b,
-                    _ => false,
-                });
-                #[cfg(feature = "uuid")]
-                {
-                    match &r.id {
-                        RequestId::String(s) => assert!(uuid::Uuid::parse_str(s).is_ok()),
-                        _ => panic!("Expected UUID string"),
-                    }
-                }
-            }
-            _ => panic!("Expected request message"),
-        }
-    }
-
-    #[cfg(not(feature = "uuid"))]
-    #[tokio::test]
-    async fn test_request_id_increment() {
-        let sent_messages = Arc::new(Mutex::new(Vec::new()));
-        let transport = MockTransport::new(sent_messages.clone());
-        let mut protocol = Protocol::new(transport);
-
-        assert!(match (protocol.get_request_id(), RequestId::Integer(1)) {
-            (RequestId::Integer(a), RequestId::Integer(b)) => a == b,
-            _ => false,
+        fixture.set_notification_handler::<TestNotification>(|notification| async move {
+            println!("Received notification: {:?}", notification);
+            Ok(())
         });
-        assert!(match (protocol.get_request_id(), RequestId::Integer(2)) {
-            (RequestId::Integer(a), RequestId::Integer(b)) => a == b,
-            _ => false,
-        });
-        assert!(match (protocol.get_request_id(), RequestId::Integer(3)) {
-            (RequestId::Integer(a), RequestId::Integer(b)) => a == b,
-            _ => false,
-        });
+
+        let transport = TestTransport::new();
+        fixture.connect(transport).await;
     }
 }
