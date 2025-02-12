@@ -5,8 +5,9 @@ use super::{
     transport::{Transport, TransportError},
 };
 use mcp_types::{
-    ClientCapabilities, Implementation, InitializeRequestParams, JSONRPCNotification,
-    JSONRPCRequest, ListToolsResult, RequestId, ServerCapabilities,
+    ClientCapabilities, Implementation, InitializeRequestParams, InitializeResult,
+    InitializedNotificationParams, ListToolsRequestParams, ListToolsResult, PingRequestParams,
+    PingRequestParamsMeta, ServerCapabilities, LATEST_PROTOCOL_VERSION,
 };
 
 pub mod handlers;
@@ -34,31 +35,72 @@ impl<T: Transport> Client<T> {
             capabilities: ClientCapabilities::default(),
             client_info: Implementation {
                 name: "mcp-core".into(),
-                version: "0.1.0".into(),
+                version: env!("CARGO_PKG_VERSION").into(),
             },
             server_info: None,
             server_capabilities: None,
         }
     }
 
-    pub async fn connect(&mut self) -> Result<(), TransportError> {
+    pub async fn connect(&mut self) -> Result<(), ClientError> {
+        self.protocol.connect().await.map_err(Into::into)
+    }
+
+    pub async fn initialize(&mut self) -> Result<(), ClientError> {
+        let params = InitializeRequestParams {
+            client_info: self.client_info.clone(),
+            capabilities: self.capabilities.clone(),
+            protocol_version: LATEST_PROTOCOL_VERSION.to_string(),
+        };
+
+        let result = self
+            .protocol
+            .send_request::<InitializeResult>("initialize", serde_json::to_value(params).unwrap())
+            .await?;
+
+        self.server_info = Some(result.server_info);
+        self.server_capabilities = Some(result.capabilities);
+
+        let params = InitializedNotificationParams {
+            meta: Default::default(),
+        };
+
+        self.protocol
+            .send_notification(
+                "notification/initialized",
+                serde_json::to_value(params).unwrap(),
+            )
+            .await?;
+
         Ok(())
     }
 
     pub async fn ping(&mut self) -> Result<(), ClientError> {
+        let params = PingRequestParams {
+            meta: Some(PingRequestParamsMeta {
+                progress_token: None,
+            }),
+        };
+
         self.protocol
-            .send_request("ping".into(), serde_json::Value::Null)
+            .send_request::<()>("ping", serde_json::to_value(params).unwrap())
             .await?;
 
         Ok(())
     }
 
-    pub async fn list_tools(&mut self) -> Result<ListToolsResult, ClientError> {
-        let result = self
-            .protocol
-            .send_request("tools/list".into(), serde_json::Value::Null)
-            .await?;
+    pub async fn list_tools(
+        &mut self,
+        cursor: Option<String>,
+    ) -> Result<ListToolsResult, ClientError> {
+        let params = ListToolsRequestParams { cursor };
 
-        Ok(serde_json::from_value(result)?)
+        self.protocol
+            .send_request::<ListToolsResult>(
+                "tools/list".into(),
+                serde_json::to_value(params).unwrap(),
+            )
+            .await
+            .map_err(Into::into)
     }
 }

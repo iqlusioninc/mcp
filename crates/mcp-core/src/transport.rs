@@ -3,13 +3,9 @@
 //! decoding messages, as well as transmitting/receiving them.
 
 use async_trait::async_trait;
-use mcp_types::{
-    ClientCapabilities, Implementation, InitializeRequestParams, InitializeResult, JSONRPCError,
-    JSONRPCMessage, JSONRPCNotification, JSONRPCRequest, JSONRPCResponse, RequestId,
-    LATEST_PROTOCOL_VERSION,
-};
+use mcp_types::{JSONRPCError, JSONRPCMessage, JSONRPCResponse};
 use std::error::Error;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::oneshot;
 
 /// Core transport error type
 #[derive(Debug, thiserror::Error)]
@@ -26,17 +22,20 @@ pub enum TransportError {
 
 #[async_trait]
 pub trait Transport {
+    /// Start communication
+    async fn start(&mut self) -> Result<(), TransportError>;
+
     /// Send a JSON-RPC request and wait for response
     async fn send_request(
         &mut self,
-        request: JSONRPCRequest,
+        request: serde_json::Value,
         sender: oneshot::Sender<JSONRPCResponse>,
     ) -> Result<(), TransportError>;
 
     /// Send a JSON-RPC notification (fire-and-forget)
     async fn send_notification(
         &mut self,
-        notification: JSONRPCNotification,
+        notification: serde_json::Value,
     ) -> Result<(), TransportError>;
 
     /// Send a JSON-RPC response to a request
@@ -51,17 +50,3 @@ pub trait Transport {
     /// Close the transport connection
     async fn close(self) -> Result<(), TransportError>;
 }
-
-/// Extension trait for common transport operations
-#[async_trait]
-pub trait TransportExt: Transport {
-    async fn initialize(
-        &mut self,
-        client_info: Implementation,
-        capabilities: ClientCapabilities,
-    ) -> Result<InitializeResult, TransportError> {
-        todo!()
-    }
-}
-
-impl<T: Transport + ?Sized> TransportExt for T {}

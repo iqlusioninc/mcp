@@ -10,7 +10,7 @@ default = ["2024_11_05"]
 2024_11_05 = []
 
 [dependencies]
-jsonschema = "0.28.3"
+jsonschema = "0.29.0"
 schemars = "0.8.21"
 serde = { workspace = true }
 serde_json = { workspace = true }
