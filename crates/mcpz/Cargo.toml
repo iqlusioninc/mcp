@@ -1,5 +1,6 @@
 [package]
-name = "mcp-core"
+name = "mcpz"
+description = "An easy-peasy MCP implementation"
 version = "0.1.0"
 edition = "2021"
 

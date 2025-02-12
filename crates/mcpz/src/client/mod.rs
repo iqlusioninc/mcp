@@ -10,8 +10,6 @@ use mcp_types::{
     PingRequestParamsMeta, ServerCapabilities, LATEST_PROTOCOL_VERSION,
 };
 
-pub mod handlers;
-
 #[derive(Debug, thiserror::Error)]
 pub enum ClientError {
     #[error("protocol error: {0}")]
@@ -47,6 +45,7 @@ impl<T: Transport> Client<T> {
     }
 
     pub async fn initialize(&mut self) -> Result<(), ClientError> {
+        // Retrieve server info and capabilities with initialize request
         let params = InitializeRequestParams {
             client_info: self.client_info.clone(),
             capabilities: self.capabilities.clone(),
@@ -61,6 +60,8 @@ impl<T: Transport> Client<T> {
         self.server_info = Some(result.server_info);
         self.server_capabilities = Some(result.capabilities);
 
+        // Notify server that initialization is complete.
+        // Right now, we don't have any additional metadata to send
         let params = InitializedNotificationParams {
             meta: Default::default(),
         };

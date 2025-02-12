@@ -1,12 +1,12 @@
 [workspace]
 members = [
-    "crates/mcp-core",
+    "crates/mcpz",
     # "crates/mcp-transport-sse",
     # "crates/mcp-transport-stdio",
     "crates/mcp-types",
 ]
 default-members = [
-    "crates/mcp-core",
+    "crates/mcpz",
     # "crates/mcp-transport-sse",
     # "crates/mcp-transport-stdio",
     "crates/mcp-types"
