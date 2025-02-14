@@ -16,6 +16,8 @@ pub enum ClientError {
     Protocol(#[from] ProtocolError),
     #[error("transport error: {0}")]
     Transport(#[from] TransportError),
+    #[error("invalid result: {0}")]
+    InvalidResult(serde_json::Error),
 }
 
 pub struct Client<T: Transport> {
@@ -51,11 +53,14 @@ impl<T: Transport> Client<T> {
             capabilities: self.capabilities.clone(),
             protocol_version: LATEST_PROTOCOL_VERSION.to_string(),
         };
-
-        let result = self
+        let response = self
             .protocol
-            .send_request::<InitializeResult>("initialize", serde_json::to_value(params).unwrap())
+            .send_request("initialize", serde_json::to_value(params).unwrap())
             .await?;
+
+        let value = serde_json::to_value(response.result.meta).unwrap();
+        let result: InitializeResult =
+            serde_json::from_value(value).map_err(ClientError::InvalidResult)?;
 
         self.server_info = Some(result.server_info);
         self.server_capabilities = Some(result.capabilities);
@@ -84,7 +89,7 @@ impl<T: Transport> Client<T> {
         };
 
         self.protocol
-            .send_request::<()>("ping", serde_json::to_value(params).unwrap())
+            .send_request("ping", serde_json::to_value(params).unwrap())
             .await?;
 
         Ok(())
@@ -95,13 +100,15 @@ impl<T: Transport> Client<T> {
         cursor: Option<String>,
     ) -> Result<ListToolsResult, ClientError> {
         let params = ListToolsRequestParams { cursor };
+        let response = self
+            .protocol
+            .send_request("tools/list", serde_json::to_value(params).unwrap())
+            .await?;
 
-        self.protocol
-            .send_request::<ListToolsResult>(
-                "tools/list".into(),
-                serde_json::to_value(params).unwrap(),
-            )
-            .await
-            .map_err(Into::into)
+        let value = serde_json::to_value(response.result.meta).unwrap();
+        let result: ListToolsResult =
+            serde_json::from_value(value).map_err(ClientError::InvalidResult)?;
+
+        Ok(result)
     }
 }

@@ -3,8 +3,9 @@
 //! decoding messages, as well as transmitting/receiving them.
 
 use async_trait::async_trait;
-use mcp_types::{JSONRPCError, JSONRPCMessage, JSONRPCResponse};
-use std::error::Error;
+use mcp_types::{v2024_11_05::request_id::GetRequestId, JSONRPCMessage, JSONRPCResponse};
+use serde_json::json;
+use std::{error::Error, sync::mpsc};
 use tokio::sync::oneshot;
 
 /// Core transport error type
@@ -18,6 +19,8 @@ pub enum TransportError {
     Io(#[from] std::io::Error),
     #[error("Protocol error: {0}")]
     Protocol(String),
+    #[error("Channel closed")]
+    ChannelClosed,
 }
 
 #[async_trait]
@@ -25,28 +28,88 @@ pub trait Transport {
     /// Start communication
     async fn start(&mut self) -> Result<(), TransportError>;
 
-    /// Send a JSON-RPC request and wait for response
-    async fn send_request(
+    /// Send a JSON-RPC message with an optional response sender if the message is a request
+    async fn send(
         &mut self,
-        request: serde_json::Value,
-        sender: oneshot::Sender<JSONRPCResponse>,
+        message: serde_json::Value,
+        sender: Option<oneshot::Sender<JSONRPCResponse>>,
     ) -> Result<(), TransportError>;
-
-    /// Send a JSON-RPC notification (fire-and-forget)
-    async fn send_notification(
-        &mut self,
-        notification: serde_json::Value,
-    ) -> Result<(), TransportError>;
-
-    /// Send a JSON-RPC response to a request
-    async fn send_response(&mut self, response: JSONRPCResponse) -> Result<(), TransportError>;
-
-    /// Send a JSON-RPC error response
-    async fn send_error(&mut self, error: JSONRPCError) -> Result<(), TransportError>;
 
     /// Receive incoming messages
     async fn recv(&mut self) -> Option<Result<JSONRPCMessage, TransportError>>;
 
     /// Close the transport connection
     async fn close(self) -> Result<(), TransportError>;
+}
+
+pub struct MockTransport {
+    pub messages: Vec<JSONRPCMessage>,
+    pub sender: mpsc::Sender<JSONRPCMessage>,
+    pub current_id: u64,
+}
+
+impl MockTransport {
+    pub fn new() -> (Self, mpsc::Receiver<JSONRPCMessage>) {
+        let (sender, receiver) = mpsc::channel();
+        (
+            Self {
+                messages: vec![],
+                sender,
+                current_id: 0,
+            },
+            receiver,
+        )
+    }
+}
+
+#[async_trait]
+impl Transport for MockTransport {
+    async fn start(&mut self) -> Result<(), TransportError> {
+        Ok(())
+    }
+
+    async fn send(
+        &mut self,
+        message: serde_json::Value,
+        sender: Option<oneshot::Sender<JSONRPCResponse>>,
+    ) -> Result<(), TransportError> {
+        let message: JSONRPCMessage =
+            serde_json::from_value(message).map_err(TransportError::Serialization)?;
+        self.messages.push(message.clone());
+        self.sender
+            .send(message.clone())
+            .map_err(|_| TransportError::ChannelClosed)?;
+        if let Some(sender) = sender {
+            let id = message.get_request_id().unwrap();
+            let response = json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": "test",
+            });
+            sender
+                .send(serde_json::from_value(response).map_err(TransportError::Serialization)?)
+                .map_err(|_| TransportError::ChannelClosed)?;
+        }
+        Ok(())
+    }
+
+    async fn recv(&mut self) -> Option<Result<JSONRPCMessage, TransportError>> {
+        let mock_request = json!({
+            "jsonrpc": "2.0",
+            "id": self.current_id,
+            "method": "test",
+            "params": {},
+        });
+        self.current_id += 1;
+
+        Some(
+            serde_json::from_value(mock_request)
+                .map_err(TransportError::Serialization)
+                .map(JSONRPCMessage::Request),
+        )
+    }
+
+    async fn close(self) -> Result<(), TransportError> {
+        Ok(())
+    }
 }

@@ -1,6 +1,5 @@
 use super::transport::{Transport, TransportError};
-use mcp_types::{v2024_11_05::convert::assert_v2024_11_05_type, RequestId};
-use serde::de::DeserializeOwned;
+use mcp_types::{JSONRPCResponse, RequestId};
 use serde_json::json;
 use std::{
     any::TypeId,
@@ -40,11 +39,11 @@ impl<T: Transport> Protocol<T> {
     }
 
     /// Send a request with method and params, handling JSON-RPC details internally
-    pub async fn send_request<R: DeserializeOwned + 'static>(
+    pub async fn send_request(
         &mut self,
         method: &str,
         params: serde_json::Value,
-    ) -> Result<R, ProtocolError> {
+    ) -> Result<JSONRPCResponse, ProtocolError> {
         let id = RequestId::Integer(self.next_id.fetch_add(1, Ordering::SeqCst));
 
         let request = json!({
@@ -57,16 +56,10 @@ impl<T: Transport> Protocol<T> {
         let (sender, receiver) = oneshot::channel();
 
         // Send the request
-        self.transport.send_request(request, sender).await?;
+        self.transport.send(request, Some(sender)).await?;
 
         // Wait for the response
-        let result = receiver.await?.result.meta;
-
-        // Validate and deserialize the result
-        match assert_v2024_11_05_type::<R>(serde_json::to_value(result.clone()).unwrap()) {
-            Some(result) => Ok(result),
-            None => Err(ProtocolError::InvalidResult(TypeId::of::<R>(), result)),
-        }
+        receiver.await.map_err(Into::into)
     }
 
     /// Send a notification with method and params, handling JSON-RPC details internally
@@ -81,7 +74,7 @@ impl<T: Transport> Protocol<T> {
             "params": params,
         });
 
-        self.transport.send_notification(notification).await?;
+        self.transport.send(notification, None).await?;
 
         Ok(())
     }
